@@ -169,8 +169,4 @@ pio device monitor --baud 115200
 For **authorized security testing and educational use only**.
 Always test on networks and devices you own or have written authorization to test.
 
----
-
-## License
-
-MIT
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
