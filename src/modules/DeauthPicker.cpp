@@ -126,7 +126,7 @@ void DeauthPicker::_drawList() {
 
     // Hint bar
     int16_t y = SCREEN_H - 10;
-    _display.fillRect(0, y - 1, SCREEN_W, 11, CLR_HIGHLIGHT);
+    _display.fillRect(0, y - 1, SCREEN_W, 11, CLR_SUBTLE);
     _display.drawText("SEL:pick  BCK:cancel", 2, y + 1, 1, CLR_DIM);
 }
 
@@ -160,7 +160,7 @@ void DeauthPicker::_drawConfirm() {
 
     // Hint bar
     int16_t y = SCREEN_H - 10;
-    _display.fillRect(0, y - 1, SCREEN_W, 11, CLR_HIGHLIGHT);
+    _display.fillRect(0, y - 1, SCREEN_W, 11, CLR_SUBTLE);
     _display.drawText("SEL:start  BCK:back", 2, y + 1, 1, CLR_DIM);
 }
 

@@ -8,6 +8,7 @@ public:
 
     // ── Primitives ──────────────────────────────
     void clear(uint16_t color = CLR_BG);
+    void clearContent();   // Wipe only the safe content area
     void drawText(const char* text, int16_t x, int16_t y,
                   uint8_t size = 1, uint16_t color = CLR_TEXT);
     void drawTextRight(const char* text, int16_t y, uint16_t color = CLR_TEXT);

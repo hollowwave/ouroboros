@@ -163,7 +163,7 @@ void WiFiMapper::_drawAPList() {
         int16_t y = STATUSBAR_H + 2 + (i * MENU_ITEM_H);
 
         _display.fillRect(0, y, SCREEN_W, MENU_ITEM_H,
-                          selected ? CLR_HIGHLIGHT : CLR_BG);
+                          selected ? CLR_SUBTLE : CLR_BG);
 
         // SSID
         char label[14];
@@ -208,7 +208,7 @@ void WiFiMapper::_drawChannelGraph() {
         int16_t y = graphY + graphH - barH;
 
         // Background
-        _display.fillRect(x, graphY, barW - 1, graphH, CLR_HIGHLIGHT);
+        _display.fillRect(x, graphY, barW - 1, graphH, CLR_SUBTLE);
         // Bar
         if (barH > 0)
             _display.fillRect(x, y, barW - 1, barH, _rssiColor(rssi));
@@ -225,7 +225,7 @@ void WiFiMapper::_drawChannelGraph() {
 
 void WiFiMapper::_drawHintBar() {
     int16_t y = SCREEN_H - 10;
-    _display.fillRect(0, y - 1, SCREEN_W, 11, CLR_HIGHLIGHT);
+    _display.fillRect(0, y - 1, SCREEN_W, 11, CLR_SUBTLE);
     const char* hint = (_view == MapperView::AP_LIST)
         ? "SEL:channels  BCK:exit"
         : "SEL:list  BCK:exit";

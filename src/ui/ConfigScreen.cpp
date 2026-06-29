@@ -173,7 +173,7 @@ void ConfigScreen::_redraw() {
     if (FIELD_COUNT > VISIBLE) {
         int16_t dotX = (SCREEN_W - FIELD_COUNT * 6) / 2;
         for (int i = 0; i < FIELD_COUNT; i++) {
-            uint16_t c = (i == _cursor) ? CLR_ACCENT : CLR_HIGHLIGHT;
+            uint16_t c = (i == _cursor) ? CLR_ACCENT : CLR_SUBTLE;
             _display.fillRect(dotX + i * 6, SCREEN_H - 5, 4, 4, c);
         }
     }
@@ -188,7 +188,7 @@ void ConfigScreen::_drawField(uint8_t idx, bool selected, bool editing) {
 
     // Row background
     uint16_t bgColor = editing  ? CLR_ACCENT    :
-                       selected ? CLR_HIGHLIGHT  : CLR_BG;
+                       selected ? CLR_SUBTLE  : CLR_BG;
     _display.fillRect(0, y, SCREEN_W, 22, bgColor);
 
     // Label
@@ -228,14 +228,14 @@ void ConfigScreen::_drawField(uint8_t idx, bool selected, bool editing) {
 void ConfigScreen::_drawValueBar(float val, float minV, float maxV, int16_t y) {
     int16_t barW = SCREEN_W - 6;
     int16_t fill = (int16_t)((val - minV) / (maxV - minV) * barW);
-    _display.fillRect(3,        y, barW, 2, CLR_HIGHLIGHT);
+    _display.fillRect(3,        y, barW, 2, CLR_SUBTLE);
     _display.fillRect(3,        y, fill, 2, CLR_ACCENT);
 }
 
 void ConfigScreen::_drawHints() {
     // Bottom hint bar — context sensitive
     int16_t y = SCREEN_H - 10;
-    _display.fillRect(0, y - 1, SCREEN_W, 11, CLR_HIGHLIGHT);
+    _display.fillRect(0, y - 1, SCREEN_W, 11, CLR_SUBTLE);
 
     if (!_editing) {
         _display.drawText("SEL:edit", 2,         y + 1, 1, CLR_DIM);

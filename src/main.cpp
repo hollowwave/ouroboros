@@ -67,16 +67,7 @@ void setup() {
         subghz.setModulation(cfg.modulation);
     }
 
-    // ── Animated splash ──────────────────────────
-    // Show ouroboros spinning for ~2 seconds on boot
-    ouro.reset();
-    uint32_t splashStart = millis();
-    while (millis() - splashStart < 2000) {
-        ouro.tick();
-        ouro.drawSplash(ouro.frame());
-        delay(OURO_ANIM_MS);
-    }
-    // Then hand off to menu (waits for keypress)
+    // Static boot screen — no animation
     menu.begin();
 
     Serial.println("[OUROBOROS] Ready");
@@ -89,11 +80,9 @@ void loop() {
     buttons.tick();
     Screen s = menu.currentScreen();
 
-    // ── Animated splash — spin until keypress ────
-    if (s == Screen::SPLASH) {
-        ouro.tick();
-        ouro.drawSplash(ouro.frame());
-        menu.tick();   // Consumes button → navigates to MAIN_MENU
+    // ── Boot screen — static, wait for keypress ──
+    if (s == Screen::BOOT) {
+        menu.tick();
         return;
     }
 
@@ -144,7 +133,7 @@ void loop() {
     s = menu.currentScreen();
 
     // ── Stop everything on screen change ─────────
-    static Screen prevScreen = Screen::SPLASH;
+    static Screen prevScreen = Screen::BOOT;
     if (s != prevScreen) {
         stopAll();
         prevScreen = s;
@@ -215,8 +204,7 @@ void loop() {
         }
     }
 
-    // ── Ouroboros spinner on scan/wait screens ───
-    // Small spinner in top-right corner while waiting
+    // ── Ouroboros spinner on waiting screens ─────
     if (s == Screen::SUBGHZ_CAPTURE ||
         s == Screen::WIFI_PROBE_SNIFF) {
         ouro.tick();

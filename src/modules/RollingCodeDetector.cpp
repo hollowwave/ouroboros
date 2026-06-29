@@ -143,7 +143,7 @@ void RollingCodeDetector::_drawProgress() {
     int16_t barW   = SCREEN_W - 20;
     int16_t fillW  = (int16_t)((float)_captureCount / MAX_CAPTURES * barW);
     int16_t barY   = STATUSBAR_H + 52;
-    _display.fillRect(10, barY, barW, 6, CLR_HIGHLIGHT);
+    _display.fillRect(10, barY, barW, 6, CLR_SUBTLE);
     _display.fillRect(10, barY, fillW, 6, CLR_ACCENT);
 
     char countStr[20];

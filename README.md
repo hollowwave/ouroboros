@@ -1,7 +1,6 @@
 # OUROBOROS
 
 > A DIY wireless security research tool built on ESP32 DevKit v1.
-> Red on black. Snake eating its tail. Signals in, signals out.
 ---
 
 ## Hardware

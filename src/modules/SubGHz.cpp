@@ -168,7 +168,7 @@ void SubGHz::_drawScanResult(float freq, int rssi) {
     snprintf(rssiStr, sizeof(rssiStr), "%d dBm", rssi);
     _display.drawText(rssiStr, 2, barY - 2, 1, CLR_DIM);
 
-    _display.fillRect(0,    barY, barMaxW, 8, CLR_HIGHLIGHT);
+    _display.fillRect(0,    barY, barMaxW, 8, CLR_SUBTLE);
     _display.fillRect(0,    barY, barW,    8, CLR_ACCENT);
 }
 
