@@ -34,6 +34,7 @@ struct MenuItem {
     const char* label;
     Screen      target;
     uint16_t    labelColor;
+    Glyph       icon = Glyph::NONE;
 };
 
 class Menu {
@@ -62,14 +63,15 @@ private:
     void _redraw();
 
     // ── Horizontal selector renderer ─────────────
-    // Shows: ◄  LABEL  ► with position dots below
+    // Shows: ◄  ICON  LABEL  ► with position dots below
     void _renderSelector(const MenuItem* items, uint8_t count,
-                         const char* category);
+                         const char* category, Glyph categoryIcon);
 
     // ── Running screen chrome ────────────────────
-    void _renderRunningScreen(const char* category,
+    void _renderRunningScreen(const char* category, Glyph categoryIcon,
                                const char* module,
-                               const char* hint);
+                               Glyph leftHint, const char* leftLabel,
+                               Glyph rightHint, const char* rightLabel);
 
     void _renderBoot();
     void _renderMainMenu();

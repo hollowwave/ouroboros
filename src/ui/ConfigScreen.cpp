@@ -158,7 +158,7 @@ void ConfigScreen::_applyAll() {
 
 void ConfigScreen::_redraw() {
     _display.clear();
-    _display.drawStatusBar(_editing ? "  [ EDITING ]" : "Sub-GHz Config");
+    _display.drawStatusBar(_editing ? "  [ EDITING ]" : "Sub-GHz Config", false, Glyph::CONFIG);
 
     // Scroll window — show 4 fields at a time (128px / ~26px per field)
     const int8_t VISIBLE = 4;
@@ -191,9 +191,13 @@ void ConfigScreen::_drawField(uint8_t idx, bool selected, bool editing) {
                        selected ? CLR_SUBTLE  : CLR_BG;
     _display.fillRect(0, y, SCREEN_W, 22, bgColor);
 
+    // Icon
+    uint16_t iconColor = editing ? CLR_BG : (selected ? CLR_ACCENT : CLR_DIM);
+    _display.drawGlyph(f.icon, 3, y + 2, iconColor);
+
     // Label
     uint16_t labelColor = editing ? CLR_BG : (selected ? CLR_ACCENT : CLR_DIM);
-    _display.drawText(f.label, 3, y + 2, 1, labelColor);
+    _display.drawText(f.label, 14, y + 2, 1, labelColor);
 
     // Value string
     char valStr[24] = "";
@@ -203,7 +207,18 @@ void ConfigScreen::_drawField(uint8_t idx, bool selected, bool editing) {
                  f.decimals, f.value, f.unit);
     } else if (idx == 1) {
         snprintf(valStr, sizeof(valStr), "%s", _modName((int)f.value));
-    } else if (idx == 2) {
+    } else if (idx == 2) {* barW);
+    _display.fillRect(3,        y, barW, 2, CLR_SUBTLE);
+    _display.fillRect(3,        y, fill, 2, CLR_ACCENT);
+}
+
+void ConfigScreen::_drawHints() {
+    if (!_editing) {
+        _display.drawHintGlyphs(Glyph::DOT, "edit", Glyph::CHEVRON_LEFT, "save");
+    } else {
+        _display.drawHintGlyphs(Glyph::ARROW_UP, "value", Glyph::DOT, "ok");
+    }
+}
         snprintf(valStr, sizeof(valStr), "%s", _bwName((int)f.value));
     } else if (idx == 3) {
         snprintf(valStr, sizeof(valStr), "%s", _txPowerName((int)f.value));
@@ -227,21 +242,4 @@ void ConfigScreen::_drawField(uint8_t idx, bool selected, bool editing) {
 
 void ConfigScreen::_drawValueBar(float val, float minV, float maxV, int16_t y) {
     int16_t barW = SCREEN_W - 6;
-    int16_t fill = (int16_t)((val - minV) / (maxV - minV) * barW);
-    _display.fillRect(3,        y, barW, 2, CLR_SUBTLE);
-    _display.fillRect(3,        y, fill, 2, CLR_ACCENT);
-}
-
-void ConfigScreen::_drawHints() {
-    // Bottom hint bar — context sensitive
-    int16_t y = SCREEN_H - 10;
-    _display.fillRect(0, y - 1, SCREEN_W, 11, CLR_SUBTLE);
-
-    if (!_editing) {
-        _display.drawText("SEL:edit", 2,         y + 1, 1, CLR_DIM);
-        _display.drawText("BCK:save", SCREEN_W/2, y + 1, 1, CLR_DIM);
-    } else {
-        _display.drawText("U/D:value", 2,          y + 1, 1, CLR_ACCENT);
-        _display.drawText("SEL:ok",    SCREEN_W/2,  y + 1, 1, CLR_DIM);
-    }
-}
+    int16_t fill = (int16_t)((val - minV) / (maxV - minV) 

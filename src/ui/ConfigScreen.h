@@ -17,6 +17,7 @@ struct ConfigField {
     float       stepFast;   // Long-press UP/DOWN increment
     uint8_t     decimals;   // Display precision
     const char* unit;       // e.g. "MHz", "dBm"
+    Glyph       icon = Glyph::CONFIG;
 };
 
 // ─────────────────────────────────────────
@@ -48,11 +49,11 @@ private:
     // ── Fields ───────────────────────────────────
     static const uint8_t FIELD_COUNT = 5;
     ConfigField _fields[FIELD_COUNT] = {
-        { "Frequency", 433.92f, 300.0f, 928.0f, 0.01f, 1.0f,  2, "MHz" },
-        { "Modulation",  2.0f,   0.0f,   4.0f,  1.0f,  1.0f,  0, ""    },
-        { "Bandwidth",   0.0f,   0.0f,   3.0f,  1.0f,  1.0f,  0, ""    },
-        { "TX Power",    0.0f,   0.0f,   7.0f,  1.0f,  1.0f,  0, ""    },
-        { "Pkt Length", 61.0f,   1.0f,  64.0f,  1.0f,  4.0f,  0, "B"   },
+        { "Frequency", 433.92f, 300.0f, 928.0f, 0.01f, 1.0f,  2, "MHz", Glyph::SUBGHZ },
+        { "Modulation",  2.0f,   0.0f,   4.0f,  1.0f,  1.0f,  0, "",    Glyph::CONFIG },
+        { "Bandwidth",   0.0f,   0.0f,   3.0f,  1.0f,  1.0f,  0, "",    Glyph::CONFIG },
+        { "TX Power",    0.0f,   0.0f,   7.0f,  1.0f,  1.0f,  0, "",    Glyph::CONFIG },
+        { "Pkt Length", 61.0f,   1.0f,  64.0f,  1.0f,  4.0f,  0, "B",   Glyph::CONFIG },
     };
 
     // ── Label lookups for enum fields ────────────

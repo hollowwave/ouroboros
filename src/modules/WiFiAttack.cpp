@@ -116,10 +116,10 @@ void WiFiAttack::stopDeauth() {
 // ─────────────────────────────────────────
 
 static const char* SPAM_SSIDS[] = {
-    "Free WiFi", "FBI Surveillance Van", "Not Your WiFi",
-    "Pretty Fly for a WiFi", "Silence of the LANs", "Loading...",
-    "Bill Wi the Science Fi", "Searching...", "Drop It Like Its Hotspot",
-    "The LAN Before Time"
+    "Free WiFi", "Paresan Ni Diwata", "Kalbong May Bold!",
+    "Bingo Plus", "xkqv", "qwm",
+    "#sawrv", "astrrv.", "baey@da",
+    "sgjh^@!$!@"
 };
 static const int SPAM_SSID_COUNT = 10;
 

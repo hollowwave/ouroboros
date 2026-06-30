@@ -12,7 +12,6 @@
 #include "modules/NVSConfig.h"
 #include "modules/DeauthPicker.h"
 #include "modules/RollingCodeDetector.h"
-
 // ─────────────────────────────────────────
 //  Global instances
 // ─────────────────────────────────────────
@@ -42,7 +41,7 @@ void stopAll() {
     ble.stopSpam();
     subghz.stopScan();
     subghz.stopCapture();
-    moduleRunning = false;
+    moduleRunning = false;	
 }
 
 // ─────────────────────────────────────────
@@ -81,7 +80,7 @@ void loop() {
     Screen s = menu.currentScreen();
 
     // ── Boot screen — static, wait for keypress ──
-    if (s == Screen::BOOT) {
+    if (s == Screen::BOOT) {	
         menu.tick();
         return;
     }

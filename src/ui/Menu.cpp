@@ -1,27 +1,27 @@
 #include "Menu.h"
 
 static const MenuItem MAIN_ITEMS[] = {
-    { "WiFi",    Screen::WIFI_MENU,   CLR_TEXT },
-    { "BLE",     Screen::BLE_MENU,    CLR_TEXT },
-    { "Sub-GHz", Screen::SUBGHZ_MENU, CLR_TEXT },
+    { "WiFi",    Screen::WIFI_MENU,   CLR_TEXT, Glyph::WIFI   },
+    { "BLE",     Screen::BLE_MENU,    CLR_TEXT, Glyph::BLE    },
+    { "Sub-GHz", Screen::SUBGHZ_MENU, CLR_TEXT, Glyph::SUBGHZ },
 };
 static const MenuItem WIFI_ITEMS[] = {
-    { "Scan",        Screen::WIFI_SCAN,          CLR_TEXT   },
-    { "Deauth",      Screen::WIFI_DEAUTH_PICKER, CLR_ACCENT },
-    { "Beacon Spam", Screen::WIFI_BEACON_SPAM,   CLR_ACCENT },
-    { "Probe Sniff", Screen::WIFI_PROBE_SNIFF,   CLR_TEXT   },
-    { "RSSI Mapper", Screen::WIFI_MAPPER,         CLR_TEXT   },
+    { "Scan",        Screen::WIFI_SCAN,          CLR_TEXT,   Glyph::SCAN   },
+    { "Deauth",      Screen::WIFI_DEAUTH_PICKER, CLR_ACCENT, Glyph::ATTACK },
+    { "Beacon Spam", Screen::WIFI_BEACON_SPAM,   CLR_ACCENT, Glyph::ATTACK },
+    { "Probe Sniff", Screen::WIFI_PROBE_SNIFF,   CLR_TEXT,   Glyph::SCAN   },
+    { "RSSI Mapper", Screen::WIFI_MAPPER,        CLR_TEXT,   Glyph::MAPPER },
 };
 static const MenuItem BLE_ITEMS[] = {
-    { "Scan",  Screen::BLE_SCAN,  CLR_TEXT   },
-    { "Spam",  Screen::BLE_SPAM,  CLR_ACCENT },
+    { "Scan",  Screen::BLE_SCAN,  CLR_TEXT,   Glyph::SCAN   },
+    { "Spam",  Screen::BLE_SPAM,  CLR_ACCENT, Glyph::ATTACK },
 };
 static const MenuItem SUBGHZ_ITEMS[] = {
-    { "Scan",        Screen::SUBGHZ_SCAN,    CLR_TEXT },
-    { "Capture",     Screen::SUBGHZ_CAPTURE, CLR_TEXT },
-    { "Replay",      Screen::SUBGHZ_REPLAY,  CLR_TEXT },
-    { "Code Detect", Screen::SUBGHZ_ROLLING, CLR_TEXT },
-    { "Config",      Screen::SUBGHZ_CONFIG,  CLR_DIM  },
+    { "Scan",        Screen::SUBGHZ_SCAN,    CLR_TEXT, Glyph::SCAN   },
+    { "Capture",     Screen::SUBGHZ_CAPTURE, CLR_TEXT, Glyph::SCAN   },
+    { "Replay",      Screen::SUBGHZ_REPLAY,  CLR_TEXT, Glyph::ATTACK },
+    { "Code Detect", Screen::SUBGHZ_ROLLING, CLR_TEXT, Glyph::CONFIG },
+    { "Config",      Screen::SUBGHZ_CONFIG,  CLR_DIM,  Glyph::CONFIG },
 };
 
 static uint32_t bootStartTime = 0;
@@ -30,7 +30,7 @@ static bool bootTransitioned = false;
 Menu::Menu(Display& display, Buttons& buttons)
     : _display(display), _buttons(buttons) {}
 
-void Menu::begin() { 
+void Menu::begin() {
     _navigate(Screen::BOOT);
     bootStartTime = millis();
     bootTransitioned = false;
@@ -138,44 +138,59 @@ void Menu::_redraw() {
         case Screen::SUBGHZ_MENU: _renderSubGhzMenu(); break;
 
         case Screen::WIFI_SCAN:
-            _renderRunningScreen("WIFI", "Scan",        "SEL:rescan  BCK:back");       break;
+            _renderRunningScreen("WIFI", Glyph::WIFI, "Scan",
+                Glyph::DOT, "rescan", Glyph::CHEVRON_LEFT, "back");        break;
         case Screen::WIFI_DEAUTH:
-            _renderRunningScreen("WIFI", "Deauth",      "L-SEL:toggle  DBL:retarget"); break;
+            _renderRunningScreen("WIFI", Glyph::WIFI, "Deauth",
+                Glyph::DOT, "toggle", Glyph::SCAN, "retarget");            break;
         case Screen::WIFI_BEACON_SPAM:
-            _renderRunningScreen("WIFI", "Beacon Spam", "L-SEL:toggle  BCK:stop");     break;
+            _renderRunningScreen("WIFI", Glyph::WIFI, "Beacon Spam",
+                Glyph::DOT, "toggle", Glyph::CHEVRON_LEFT, "stop");        break;
         case Screen::WIFI_PROBE_SNIFF:
-            _renderRunningScreen("WIFI", "Probe Sniff", "BCK:stop");                   break;
+            _renderRunningScreen("WIFI", Glyph::WIFI, "Probe Sniff",
+                Glyph::NONE, nullptr, Glyph::CHEVRON_LEFT, "stop");        break;
         case Screen::BLE_SCAN:
-            _renderRunningScreen("BLE",  "Scan",        "SEL:rescan  BCK:back");       break;
+            _renderRunningScreen("BLE", Glyph::BLE, "Scan",
+                Glyph::DOT, "rescan", Glyph::CHEVRON_LEFT, "back");        break;
         case Screen::BLE_SPAM:
-            _renderRunningScreen("BLE",  "Spam",        "L-SEL:toggle  BCK:stop");     break;
+            _renderRunningScreen("BLE", Glyph::BLE, "Spam",
+                Glyph::DOT, "toggle", Glyph::CHEVRON_LEFT, "stop");        break;
         case Screen::SUBGHZ_SCAN:
-            _renderRunningScreen("SUB-GHZ", "Scan",     "BCK:stop");                   break;
+            _renderRunningScreen("SUB-GHZ", Glyph::SUBGHZ, "Scan",
+                Glyph::NONE, nullptr, Glyph::CHEVRON_LEFT, "stop");        break;
         case Screen::SUBGHZ_CAPTURE:
-            _renderRunningScreen("SUB-GHZ", "Capture",  "BCK:cancel");                 break;
+            _renderRunningScreen("SUB-GHZ", Glyph::SUBGHZ, "Capture",
+                Glyph::NONE, nullptr, Glyph::CHEVRON_LEFT, "cancel");      break;
         case Screen::SUBGHZ_REPLAY:
-            _renderRunningScreen("SUB-GHZ", "Replay",   "SEL:again  BCK:back");        break;
+            _renderRunningScreen("SUB-GHZ", Glyph::SUBGHZ, "Replay",
+                Glyph::DOT, "again", Glyph::CHEVRON_LEFT, "back");         break;
         default: break;
     }
 }
 
 void Menu::_renderSelector(const MenuItem* items, uint8_t count,
-                            const char* category) {
+                            const char* category, Glyph categoryIcon) {
     _display.clear();
-    _display.drawStatusBar(category);
+    _display.drawStatusBar(category, false, categoryIcon);
 
     const MenuItem& item = items[_cursor];
 
     int16_t contentTop = STATUSBAR_H + 1;
     int16_t contentBot = SCREEN_H - 22;
-    int16_t labelY     = contentTop + (contentBot - contentTop) / 2 - 4;
+    int16_t centerY    = contentTop + (contentBot - contentTop) / 2;
 
+    // Icon sits above the label, both centered as a block
+    if (item.icon != Glyph::NONE) {
+        _display.drawGlyph(item.icon, (SCREEN_W - 8) / 2, centerY - 14, item.labelColor);
+    }
+
+    int16_t labelY = centerY - 4;
     int16_t labelW = strlen(item.label) * 6;
     int16_t labelX = (SCREEN_W - labelW) / 2;
-    _display.drawText(labelX, labelY, item.label, 1, item.labelColor);
+    _display.drawText(item.label, labelX, labelY, 1, item.labelColor);
 
-    _display.drawText(4,             labelY, "<", 1, CLR_ACCENT);
-    _display.drawText(SCREEN_W - 10, labelY, ">", 1, CLR_ACCENT);
+    _display.drawGlyph(Glyph::CHEVRON_LEFT,  2,             labelY - 1, CLR_ACCENT);
+    _display.drawGlyph(Glyph::CHEVRON_RIGHT, SCREEN_W - 10, labelY - 1, CLR_ACCENT);
 
     int16_t dotY      = SCREEN_H - 20;
     int16_t dotStep   = 10;
@@ -190,16 +205,17 @@ void Menu::_renderSelector(const MenuItem* items, uint8_t count,
             _display.raw().drawCircle(dx, dotY, 2, CLR_SUBTLE);
     }
 
-    _display.drawHintBar("SEL:enter  BCK:back");
+    _display.drawHintGlyphs(Glyph::DOT, "enter", Glyph::CHEVRON_LEFT, "back");
 }
 
-void Menu::_renderRunningScreen(const char* category,
+void Menu::_renderRunningScreen(const char* category, Glyph categoryIcon,
                                  const char* module,
-                                 const char* hint) {
+                                 Glyph leftHint, const char* leftLabel,
+                                 Glyph rightHint, const char* rightLabel) {
     char breadcrumb[32];
     snprintf(breadcrumb, sizeof(breadcrumb), "%s > %s", category, module);
-    _display.drawStatusBar(breadcrumb, true);
-    _display.drawHintBar(hint);
+    _display.drawStatusBar(breadcrumb, true, categoryIcon);
+    _display.drawHintGlyphs(leftHint, leftLabel, rightHint, rightLabel);
 }
 
 void Menu::_renderBoot() {
@@ -208,7 +224,7 @@ void Menu::_renderBoot() {
     _display.raw().setTextColor(CLR_ACCENT);
     _display.raw().setTextSize(1);
     _display.raw().setCursor(56, 32);
-    _display.raw().print("∞");
+    _display.raw().print("8");
 
     _display.raw().setTextColor(CLR_ACCENT);
     _display.raw().setTextSize(1);
@@ -223,7 +239,7 @@ void Menu::_renderBoot() {
     _display.drawCenteredText("initializing...", 100, CLR_SUBTLE);
 }
 
-void Menu::_renderMainMenu()   { _renderSelector(MAIN_ITEMS,   3, "OUROBOROS"); }
-void Menu::_renderWifiMenu()   { _renderSelector(WIFI_ITEMS,   5, "WIFI"); }
-void Menu::_renderBleMenu()    { _renderSelector(BLE_ITEMS,    2, "BLUETOOTH"); }
-void Menu::_renderSubGhzMenu() { _renderSelector(SUBGHZ_ITEMS, 5, "SUB-GHZ"); }
+void Menu::_renderMainMenu()   { _renderSelector(MAIN_ITEMS,   3, "OUROBOROS", Glyph::NONE); }
+void Menu::_renderWifiMenu()   { _renderSelector(WIFI_ITEMS,   5, "WIFI",      Glyph::WIFI); }
+void Menu::_renderBleMenu()    { _renderSelector(BLE_ITEMS,    2, "BLUETOOTH", Glyph::BLE); }
+void Menu::_renderSubGhzMenu() { _renderSelector(SUBGHZ_ITEMS, 5, "SUB-GHZ",   Glyph::SUBGHZ); }
