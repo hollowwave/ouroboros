@@ -24,10 +24,17 @@ static const MenuItem SUBGHZ_ITEMS[] = {
     { "Config",      Screen::SUBGHZ_CONFIG,  CLR_DIM  },
 };
 
+static uint32_t bootStartTime = 0;
+static bool bootTransitioned = false;
+
 Menu::Menu(Display& display, Buttons& buttons)
     : _display(display), _buttons(buttons) {}
 
-void Menu::begin() { _navigate(Screen::BOOT); }
+void Menu::begin() { 
+    _navigate(Screen::BOOT);
+    bootStartTime = millis();
+    bootTransitioned = false;
+}
 
 void Menu::tick() {
     if (_screen == Screen::SUBGHZ_CONFIG      ||
@@ -37,8 +44,12 @@ void Menu::tick() {
 
     BtnEvent e = _buttons.consume();
 
+    // Boot screen — auto-transition after 3 seconds, ONLY on first boot
     if (_screen == Screen::BOOT) {
-        if (e != BtnEvent::NONE) _navigate(Screen::MAIN_MENU);
+        if (!bootTransitioned && millis() - bootStartTime >= 3000) {
+            _navigate(Screen::MAIN_MENU);
+            bootTransitioned = true;
+        }
         return;
     }
 
@@ -63,9 +74,6 @@ void Menu::tick() {
     if (_needsRedraw) { _redraw(); _needsRedraw = false; }
 }
 
-// ─────────────────────────────────────────
-//  Navigation
-// ─────────────────────────────────────────
 void Menu::_navigate(Screen to) {
     _prevScreen  = _screen;
     _screen      = to;
@@ -121,9 +129,6 @@ void Menu::_select(int16_t count) {
     }
 }
 
-// ─────────────────────────────────────────
-//  Rendering
-// ─────────────────────────────────────────
 void Menu::_redraw() {
     switch (_screen) {
         case Screen::BOOT:        _renderBoot();       break;
@@ -154,23 +159,6 @@ void Menu::_redraw() {
     }
 }
 
-// ─────────────────────────────────────────
-//  Horizontal selector
-//
-//  ┌──────────────────────────────────┐
-//  │  CATEGORY              [dot]     │  13px status bar
-//  ├──────────────────────────────────┤
-//  │                                  │
-//  │                                  │
-//  │  <         LABEL         >       │  vertically centered
-//  │                                  │
-//  │                                  │
-//  ├──────────────────────────────────┤
-//  │           ○ ○ ● ○ ○              │  10px position dots
-//  ├──────────────────────────────────┤
-//  │  SEL:enter  BCK:back             │  11px hint bar
-//  └──────────────────────────────────┘
-// ─────────────────────────────────────────
 void Menu::_renderSelector(const MenuItem* items, uint8_t count,
                             const char* category) {
     _display.clear();
@@ -178,21 +166,17 @@ void Menu::_renderSelector(const MenuItem* items, uint8_t count,
 
     const MenuItem& item = items[_cursor];
 
-    // Content area height — between status bar and dots row
     int16_t contentTop = STATUSBAR_H + 1;
-    int16_t contentBot = SCREEN_H - 22;   // 11px hint + 11px dots
+    int16_t contentBot = SCREEN_H - 22;
     int16_t labelY     = contentTop + (contentBot - contentTop) / 2 - 4;
 
-    // Label — centered, colored
     int16_t labelW = strlen(item.label) * 6;
     int16_t labelX = (SCREEN_W - labelW) / 2;
-    _display.drawText(item.label, labelX, labelY, 1, item.labelColor);
+    _display.drawText(labelX, labelY, item.label, 1, item.labelColor);
 
-    // Arrows
-    _display.drawText("<", 4,             labelY, 1, CLR_ACCENT);
-    _display.drawText(">", SCREEN_W - 10, labelY, 1, CLR_ACCENT);
+    _display.drawText(4,             labelY, "<", 1, CLR_ACCENT);
+    _display.drawText(SCREEN_W - 10, labelY, ">", 1, CLR_ACCENT);
 
-    // Position dots — centered row
     int16_t dotY      = SCREEN_H - 20;
     int16_t dotStep   = 10;
     int16_t dotsW     = (count - 1) * dotStep;
@@ -206,18 +190,9 @@ void Menu::_renderSelector(const MenuItem* items, uint8_t count,
             _display.raw().drawCircle(dx, dotY, 2, CLR_SUBTLE);
     }
 
-    // Hint bar
     _display.drawHintBar("SEL:enter  BCK:back");
 }
 
-// ─────────────────────────────────────────
-//  Running screen chrome
-//
-//  Status bar shows breadcrumb: CATEGORY > MODULE
-//  Active dot shows module is running
-//  Content area owned by the module itself
-//  Hint bar at bottom
-// ─────────────────────────────────────────
 void Menu::_renderRunningScreen(const char* category,
                                  const char* module,
                                  const char* hint) {
@@ -227,26 +202,25 @@ void Menu::_renderRunningScreen(const char* category,
     _display.drawHintBar(hint);
 }
 
-// ─────────────────────────────────────────
-//  Screens
-// ─────────────────────────────────────────
 void Menu::_renderBoot() {
     _display.clear();
 
-    _display.raw().setTextColor(CLR_ACCENT, CLR_BG);
-    _display.raw().setTextSize(2);
-    _display.raw().setCursor((SCREEN_W - 72) / 2, 34);
-    _display.raw().print("OURO");
+    _display.raw().setTextColor(CLR_ACCENT);
+    _display.raw().setTextSize(1);
+    _display.raw().setCursor(56, 32);
+    _display.raw().print("∞");
 
-    _display.raw().setTextColor(CLR_ACCENT_DIM, CLR_BG);
-    _display.raw().setCursor((SCREEN_W - 72) / 2, 52);
-    _display.raw().print("BOROS");
+    _display.raw().setTextColor(CLR_ACCENT);
+    _display.raw().setTextSize(1);
+    int16_t titleW = 9 * 6;
+    _display.raw().setCursor((SCREEN_W - titleW) / 2, 50);
+    _display.raw().print("OUROBOROS");
 
-    _display.raw().drawFastHLine(20, 72, SCREEN_W - 40, CLR_ACCENT_DIM);
+    _display.raw().drawFastHLine(20, 62, SCREEN_W - 40, CLR_ACCENT_DIM);
 
-    _display.drawCenteredText("v1.0-beta",     80, CLR_DIM);
-    _display.drawCenteredText("by hollowwave",  92, CLR_DIM);
-    _display.drawCenteredText("press any key", 110, CLR_SUBTLE);
+    _display.drawCenteredText("by hollowwave", 72, CLR_ACCENT_DIM);
+
+    _display.drawCenteredText("initializing...", 100, CLR_SUBTLE);
 }
 
 void Menu::_renderMainMenu()   { _renderSelector(MAIN_ITEMS,   3, "OUROBOROS"); }
