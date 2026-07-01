@@ -28,6 +28,14 @@ enum class Screen {
     SUBGHZ_REPLAY,
     SUBGHZ_ROLLING,
     SUBGHZ_CONFIG,
+
+    // Frame Analysis (NEW)
+    FRAME_ANALYSIS,
+    FRAME_ANALYSIS_BEACON,
+    FRAME_ANALYSIS_AUTH,
+    FRAME_ANALYSIS_DEAUTH,
+    FRAME_ANALYSIS_PROBE,
+    FRAME_ANALYSIS_GATT,
 };
 
 struct MenuItem {
@@ -78,4 +86,5 @@ private:
     void _renderWifiMenu();
     void _renderBleMenu();
     void _renderSubGhzMenu();
+    void _renderFrameAnalysisMenu();
 };
