@@ -29,13 +29,19 @@ enum class Screen {
     SUBGHZ_ROLLING,
     SUBGHZ_CONFIG,
 
-    // Frame Analysis (NEW)
+    // Frame Analysis
     FRAME_ANALYSIS,
     FRAME_ANALYSIS_BEACON,
     FRAME_ANALYSIS_AUTH,
     FRAME_ANALYSIS_DEAUTH,
     FRAME_ANALYSIS_PROBE,
     FRAME_ANALYSIS_GATT,
+
+    // Evil Twin (NEW)
+    EVIL_TWIN_MENU,
+    EVIL_TWIN_SCAN,
+    EVIL_TWIN_RUNNING,
+    EVIL_TWIN_CREDENTIALS,
 };
 
 struct MenuItem {
@@ -87,4 +93,5 @@ private:
     void _renderBleMenu();
     void _renderSubGhzMenu();
     void _renderFrameAnalysisMenu();
+    void _renderEvilTwinMenu();
 };
