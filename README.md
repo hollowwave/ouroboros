@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/banner.png"/>
+</div>
+
 # OUROBOROS
 
 > A DIY wireless security research tool built on ESP32 DevKit v1.
@@ -22,6 +26,8 @@
 - Beacon spam (rotating SSIDs, all channels)
 - Probe request sniffer (channel-hopping)
 - RSSI mapper — live AP list + channel graph, auto-rescan every 3s
+- FrameConstructionModule — IEEE 802.11 frame builder (beacon, probe, auth, deauth, association)
+- EvilTwinModule — Standalone rogue AP implementation (OPEN_NETWORK, WPA2_MIMIC, CAPTIVE_PORTAL)
 
 ### Bluetooth
 - BLE device scanner
@@ -81,6 +87,11 @@
 | SELECT | GPIO 14 |
 | BACK | GPIO 27 |
 
+<div align="center">
+  <img src="assets/ss.jpg" alt="drawing" width="400" />
+  <p>still working on the design🥹🥹🥹</p>
+</div>
+
 ---
 
 ## Button Controls
@@ -112,6 +123,8 @@ ouroboros/
 │   │   ├── SubGHz.h/cpp          # CC1101 scan / capture / replay
 │   │   ├── RollingCodeDetector.h/cpp  # Fixed vs rolling code analysis
 │   │   ├── DeauthPicker.h/cpp    # AP target selector
+│   │   ├── EvilTwinModule.h/cpp  # OPEN_NETWORK, WPA2_MIMIC, CAPTIVE_PORTAL
+│   │   ├── FrameConstructionModule.h/cpp # Non-blocking state machine + GATT characteristic integration
 │   │   └── NVSConfig.h/cpp       # Persistent config via ESP32 NVS
 │   └── utils/
 │       └── Buttons.h/cpp         # OneButton — click / long / double
