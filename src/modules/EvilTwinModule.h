@@ -13,7 +13,7 @@
 // ─────────────────────────────────────────
 #define EVIL_TWIN_MAX_TARGETS   10
 #define EVIL_TWIN_CACHE_SIZE    512   // Bytes for NVS cache
-#define EVIL_TWIN_CREDENTIALS   50    // Max captured credentials
+#define EVIL_TWIN_MAX_CREDENTIALS   50    // Max captured credentials
 #define EVIL_TWIN_MAX_CLIENTS   8     // Concurrent fake AP clients
 #define EVIL_TWIN_BROADCAST_INTERVAL 100  // ms
 
