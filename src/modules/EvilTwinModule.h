@@ -133,7 +133,7 @@ private:
     uint8_t      _fake_client_macs[EVIL_TWIN_MAX_CLIENTS][6];
     
     // ── Credential Capture ───────────────────────
-    CapturedCredential _captured_credentials[EVIL_TWIN_CREDENTIALS];
+    CapturedCredential _captured_credentials[EVIL_TWIN_MAX_CREDENTIALS];
     int                _captured_creds_count = 0;
     bool               _capture_eapol = true;
     bool               _capture_dhcp = true;
