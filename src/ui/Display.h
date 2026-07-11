@@ -1,6 +1,6 @@
 #pragma once
 #include <TFT_eSPI.h>
-#include "config.h"`
+#include "config.h"
 enum class Glyph {
     NONE,
     WIFI,
