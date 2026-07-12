@@ -269,15 +269,16 @@ void BLESnifferJammer::_enablePromiscuousMode() {
     
     esp_ble_gap_register_callback(_blePacketCallback);
     
-    esp_ble_gap_set_scan_params(&(ble_scan_params_t){
+    esp_ble_scan_params_t scan_params = {
         .scan_type = BLE_SCAN_TYPE_PASSIVE,
         .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
         .scan_filter_policy = BLE_SCAN_FILTER_ALLOW_ALL,
         .scan_interval = 0x50,
         .scan_window = 0x30,
         .scan_duplicate = BLE_SCAN_DUPLICATE_DISABLE
-    });
+    };
     
+    esp_ble_gap_set_scan_params(&scan_params);
     esp_ble_gap_start_scanning(0);  // 0 = scan indefinitely
 }
 
@@ -289,20 +290,20 @@ void BLESnifferJammer::_disablePromiscuousMode() {
 // ─────────────────────────────────────────
 //  Static Callback (required for ESP32 BLE)
 // ─────────────────────────────────────────
-void BLESnifferJammer::_blePacketCallback(esp_ble_gap_cb_event_t event, 
+void BLESnifferJammer::_blePacketCallback(esp_gap_ble_cb_event_t event, 
                                           esp_ble_gap_cb_param_t* param) {
     if (!_instance) return;
     
     switch (event) {
         case ESP_GAP_BLE_SCAN_RESULT_EVT: {
-            esp_ble_gap_search_evt_param_t* search_param = &param->scan_rst;
+            esp_ble_gap_search_evt_param_t search_param = param->scan_rst;
             
-            if (search_param->search_evt == ESP_GAP_SEARCH_INQ_RES_EVT) {
+            if (search_param.search_evt == ESP_GAP_SEARCH_INQ_RES_EVT) {
                 _instance->_handleBLEPacket(
-                    search_param->bda,
-                    search_param->rssi,
-                    search_param->ble_adv,
-                    search_param->adv_data_len
+                    search_param.bda,
+                    search_param.rssi,
+                    search_param.ble_adv,
+                    search_param.adv_data_len
                 );
             }
             break;
