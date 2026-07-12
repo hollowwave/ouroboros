@@ -42,7 +42,7 @@
 - NVS persistence — config survives reboots
 
 ### UI
-- Animated Ouroboros splash screen (rotating snake ring)
+- Animated Ouroboros splash screen(rotating snake ring)
 - Red on black theme throughout
 - Status bar with active module indicator dot
 - Hint bar on every screen
