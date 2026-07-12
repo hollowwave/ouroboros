@@ -20,6 +20,9 @@ enum class Screen {
     BLE_MENU,
     BLE_SCAN,
     BLE_SPAM,
+    BLE_SNIFFER_SCAN,      // NEW - BLE device discovery
+    BLE_JAMMER_CONTROL,    // NEW - BLE jammer active
+    BLE_STATS,             // NEW - Statistics & diagnostics
 
     // Sub-GHz
     SUBGHZ_MENU,
