@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include "../ui/Display.h"
 #include "../utils/Buttons.h"
-#include "BLESnifferJammer.h"
+#include "../modules/BLESnifferJammer.h"
 
 // ─────────────────────────────────────────
 //  BLE Sniffer Screen - Device Discovery
