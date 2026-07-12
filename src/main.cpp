@@ -4,10 +4,12 @@
 #include "ui/Menu.h"
 #include "ui/Ouroboros.h"
 #include "ui/ConfigScreen.h"
+#include "ui/BLEScannerUI.h"
 #include "utils/Buttons.h"
 #include "modules/WiFiAttack.h"
 #include "modules/WiFiMapper.h"
 #include "modules/BLEModule.h"
+#include "modules/BLESnifferJammer.h"
 #include "modules/SubGHz.h"
 #include "modules/NVSConfig.h"
 #include "modules/DeauthPicker.h"
@@ -25,6 +27,7 @@ Menu                      menu(display, buttons);
 WiFiAttack                wifi(display);
 WiFiMapper                mapper(display, buttons);
 BLEModule                 ble(display);
+BLESnifferJammer          bleJammer(display);
 SubGHz                    subghz(display);
 NVSConfig                 nvs;
 ConfigScreen              config(display, buttons, subghz);
@@ -32,6 +35,11 @@ DeauthPicker              deauthPicker(display, buttons, wifi);
 RollingCodeDetector       rollingCode(display, buttons);
 FrameConstructionModule   frameBuilder(display);
 EvilTwinModule            evilTwin(display);
+
+// BLE Sniffer UI screens
+BLEScanScreen             bleScanScreen(display, buttons, bleJammer);
+BLEJammerScreen           bleJammerScreen(display, buttons, bleJammer);
+BLEStatsScreen            bleStatsScreen(display, buttons, bleJammer);
 
 bool moduleRunning = false;
 
@@ -53,6 +61,16 @@ struct EvilTwinWorkflowState {
 };
 
 EvilTwinWorkflowState evilTwinState;
+
+// ─────────────────────────────────────────
+//  BLE Sniffer State
+// ─────────────────────────────────────────
+struct BLESnifferState {
+    int8_t           selected_device = -1;
+    uint32_t         start_time_ms = 0;
+};
+
+BLESnifferState bleSnifferState;
 
 // ─────────────────────────────────────────
 //  Frame Analysis State
@@ -91,6 +109,7 @@ void stopAll() {
     wifi.stopProbeSniff();
     mapper.stop();
     ble.stopSpam();
+    bleJammer.stop();
     subghz.stopScan();
     subghz.stopCapture();
     frameBuilder.stop();
@@ -101,7 +120,128 @@ void stopAll() {
 }
 
 // ─────────────────────────────────────────
-//  Evil Twin UI & Workflow
+//  BLE Sniffer Screens
+// ─────────────────────────────────────────
+
+void displayBLEScanResults() {
+    display.clear();
+    display.drawStatusBar("BLE Sniffer - Scanning");
+
+    int scan_count = bleJammer.getDiscoveredCount();
+    const BLEPacketInfo* devices = bleJammer.getDiscoveredDevices();
+
+    int16_t y = STATUSBAR_H + 4;
+
+    if (scan_count == 0) {
+        display.drawCenteredText("Scanning for devices...", SCREEN_H / 2, CLR_DIM);
+        char pkt_str[32];
+        snprintf(pkt_str, sizeof(pkt_str), "Packets: %d", bleJammer.getCapturedPacketCount());
+        display.drawCenteredText(pkt_str, SCREEN_H / 2 + 12, CLR_DIM);
+        display.drawHintBar("SELECT: Refresh | BACK: Menu");
+        return;
+    }
+
+    // Show up to 5 devices
+    for (int i = 0; i < (scan_count > 5 ? 5 : scan_count); i++) {
+        const BLEPacketInfo& dev = devices[i];
+        
+        char label[40];
+        const char* name = (dev.name[0] != '\0') ? dev.name : "[No Name]";
+        snprintf(label, sizeof(label), "%.16s [%d]", name, dev.rssi);
+
+        uint16_t color = (i == bleSnifferState.selected_device) ? CLR_ACCENT : CLR_TEXT;
+        display.drawText(label, 2, y, 1, color);
+        y += MENU_ITEM_H;
+    }
+
+    // Footer
+    char footer[32];
+    snprintf(footer, sizeof(footer), "Devices: %d | Packets: %d",
+            scan_count, bleJammer.getCapturedPacketCount());
+    display.drawText(footer, 2, SCREEN_H - 12, 1, CLR_DIM);
+
+    display.drawHintBar("UP/DOWN: Select | SELECT_LONG: Jam | BACK: Exit");
+}
+
+void displayBLEJammerActive() {
+    display.clear();
+    display.drawStatusBar("BLE Jammer - ACTIVE");
+
+    int16_t y = STATUSBAR_H + 4;
+
+    // Mode
+    char mode_str[32];
+    snprintf(mode_str, sizeof(mode_str), "Mode: %s", bleJammer.getModeString());
+    display.drawText(mode_str, 2, y, 1, CLR_TEXT);
+    y += MENU_ITEM_H;
+
+    // Elapsed time
+    uint32_t elapsed = millis() - bleSnifferState.start_time_ms;
+    uint32_t seconds = elapsed / 1000;
+    char time_str[32];
+    snprintf(time_str, sizeof(time_str), "Elapsed: %u:%02u", seconds / 60, seconds % 60);
+    display.drawText(time_str, 2, y, 1, CLR_TEXT);
+    y += MENU_ITEM_H;
+
+    // Packets sent
+    char pkt_str[32];
+    snprintf(pkt_str, sizeof(pkt_str), "Packets: %lu", bleJammer.getPacketsSent());
+    display.drawText(pkt_str, 2, y, 1, CLR_ACCENT);
+    y += MENU_ITEM_H;
+
+    // Interruption attempts
+    char att_str[32];
+    snprintf(att_str, sizeof(att_str), "Attempts: %lu", bleJammer.getInterruptionAttempts());
+    display.drawText(att_str, 2, y, 1, CLR_TEXT);
+    y += MENU_ITEM_H;
+
+    // Status indicator
+    display.drawText("Status: ", 2, y, 1, CLR_TEXT);
+    display.drawTextRight("JAMMING", y, CLR_OK);
+
+    display.drawHintBar("SELECT_LONG: Stop | BACK: Menu");
+}
+
+void displayBLEStats() {
+    display.clear();
+    display.drawStatusBar("BLE Statistics");
+
+    int16_t y = STATUSBAR_H + 4;
+
+    // Mode
+    char mode_str[32];
+    snprintf(mode_str, sizeof(mode_str), "Mode: %s", bleJammer.getModeString());
+    display.drawText(mode_str, 2, y, 1, CLR_TEXT);
+    y += MENU_ITEM_H;
+
+    // Discovered devices
+    char dev_str[32];
+    snprintf(dev_str, sizeof(dev_str), "Devices: %d", bleJammer.getDiscoveredCount());
+    display.drawText(dev_str, 2, y, 1, CLR_TEXT);
+    y += MENU_ITEM_H;
+
+    // Total packets
+    char pkt_str[32];
+    snprintf(pkt_str, sizeof(pkt_str), "Packets: %d", bleJammer.getCapturedPacketCount());
+    display.drawText(pkt_str, 2, y, 1, CLR_TEXT);
+    y += MENU_ITEM_H;
+
+    // Jammer packets
+    char jam_pkt_str[32];
+    snprintf(jam_pkt_str, sizeof(jam_pkt_str), "Jam Packets: %lu", bleJammer.getPacketsSent());
+    display.drawText(jam_pkt_str, 2, y, 1, CLR_TEXT);
+    y += MENU_ITEM_H;
+
+    // Interruption count
+    char int_str[32];
+    snprintf(int_str, sizeof(int_str), "Attempts: %lu", bleJammer.getInterruptionAttempts());
+    display.drawText(int_str, 2, y, 1, CLR_DIM);
+
+    display.drawHintBar("BACK: Exit");
+}
+
+// ─────────────────────────────────────────
+//  Evil Twin UI & Workflow (existing code)
 // ─────────────────────────────────────────
 
 void displayEvilTwinScanResults() {
@@ -433,6 +573,7 @@ void setup() {
     buttons.begin();
     nvs.begin();
     ble.begin();
+    bleJammer.begin();
     frameBuilder.begin();
     evilTwin.begin();
 
@@ -450,6 +591,7 @@ void setup() {
     Serial.println("[OUROBOROS] Ready");
     Serial.println("[OUROBOROS] Frame Construction Module loaded");
     Serial.println("[OUROBOROS] Evil Twin Module loaded");
+    Serial.println("[OUROBOROS] BLE Sniffer/Jammer Module loaded");
 }
 
 // ─────────────────────────────────────────
@@ -465,7 +607,76 @@ void loop() {
         return;
     }
 
-    // ── Evil Twin Screens (NEW) ──────────────────
+    // ── BLE Sniffer Screens (NEW) ────────────────
+    if (s == Screen::BLE_SNIFFER_SCAN) {
+        displayBLEScanResults();
+        bleJammer.tick();
+
+        BtnEvent e = buttons.consume();
+
+        if (e == BtnEvent::DOWN && bleSnifferState.selected_device < bleJammer.getDiscoveredCount() - 1) {
+            bleSnifferState.selected_device++;
+        }
+
+        if (e == BtnEvent::UP && bleSnifferState.selected_device > 0) {
+            bleSnifferState.selected_device--;
+        }
+
+        if (e == BtnEvent::SELECT) {
+            // Manual refresh
+        }
+
+        if (e == BtnEvent::SELECT_LONG && bleJammer.getDiscoveredCount() > 0) {
+            // Start selective jam on selected device
+            const BLEPacketInfo* devices = bleJammer.getDiscoveredDevices();
+            bleJammer.startSelectiveJam(devices[bleSnifferState.selected_device].addr);
+            bleSnifferState.start_time_ms = millis();
+            moduleRunning = true;
+            menu.forceScreen(Screen::BLE_JAMMER_CONTROL);
+        }
+
+        if (e == BtnEvent::BACK) {
+            bleJammer.stopSniffing();
+            menu.forceScreen(Screen::BLE_MENU);
+        }
+
+        return;
+    }
+
+    if (s == Screen::BLE_JAMMER_CONTROL) {
+        displayBLEJammerActive();
+        bleJammer.tick();
+
+        BtnEvent e = buttons.consume();
+
+        if (e == BtnEvent::SELECT_LONG) {
+            bleJammer.stopJam();
+            moduleRunning = false;
+            menu.forceScreen(Screen::BLE_SNIFFER_SCAN);
+        }
+
+        if (e == BtnEvent::BACK) {
+            bleJammer.stopJam();
+            moduleRunning = false;
+            menu.forceScreen(Screen::BLE_MENU);
+        }
+
+        return;
+    }
+
+    if (s == Screen::BLE_STATS) {
+        displayBLEStats();
+
+        BtnEvent e = buttons.consume();
+
+        if (e == BtnEvent::BACK) {
+            menu.forceScreen(Screen::BLE_MENU);
+        }
+
+        return;
+    }
+
+    // ── Evil Twin Screens (existing code) ────────
     if (s == Screen::EVIL_TWIN_SCAN) {
         displayEvilTwinScanResults();
         evilTwin.tick();
@@ -667,6 +878,11 @@ void loop() {
                 wifi.startScan(); break;
             case Screen::BLE_SCAN:
                 ble.startScan(); break;
+            case Screen::BLE_SNIFFER_SCAN:
+                bleJammer.startSniffing(); 
+                bleSnifferState.selected_device = 0;
+                moduleRunning = true; 
+                break;
             case Screen::SUBGHZ_SCAN:
                 subghz.startScan(); moduleRunning = true; break;
             case Screen::SUBGHZ_CAPTURE:
@@ -735,10 +951,12 @@ void loop() {
     // ── Non-blocking ticks ───────────────────────
     frameBuilder.tick();
     evilTwin.tick();
+    bleJammer.tick();
 
     // ── Ouroboros spinner on waiting screens ─────
     if (s == Screen::SUBGHZ_CAPTURE ||
-        s == Screen::WIFI_PROBE_SNIFF) {
+        s == Screen::WIFI_PROBE_SNIFF ||
+        s == Screen::BLE_SNIFFER_SCAN) {
         ouro.tick();
         ouro.drawAt(SCREEN_W - 14, STATUSBAR_H + 14, 8, ouro.frame());
     }
