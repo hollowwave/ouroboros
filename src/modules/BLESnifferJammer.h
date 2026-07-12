@@ -4,6 +4,7 @@
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEScan.h>
+#include <esp_gap_ble_api.h>
 #include "../ui/Display.h"
 
 // ─────────────────────────────────────────
@@ -111,6 +112,6 @@ private:
     void _disablePromiscuousMode();
 
     // ── Static callbacks for BLE stack ───────────
-    static void _blePacketCallback(esp_ble_gap_cb_event_t event, esp_ble_gap_cb_param_t* param);
+    static void _blePacketCallback(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param);
     static BLESnifferJammer* _instance;
 };
