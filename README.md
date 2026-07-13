@@ -1,10 +1,27 @@
 <div align="center">
   <img src="assets/banner.png"/>
 </div>
+<h1 align="center">OUROBOROS</h1>
+<p align="center"> 
+  <img src="https://img.shields.io/badge/PlatformIO-Compatible-blue.svg">
+  <img src="https://img.shields.io/badge/License-MIT-green.svg">
+  <img src="https://img.shields.io/badge/Status-Active-red.svg">
+</p>
+<p align="center"> 
+   A DIY wireless security research tool built on ESP32 DevKit v1.
+</p>
 
-# OUROBOROS
+## Getting Started
 
-> A DIY wireless security research tool built on ESP32 DevKit v1.
+### Prerequisites
+* **PlatformIO** installed in VS Code or the CLI-base
+* **TFT_eSPI Library:** You must configure `User_Setup.h` within your local library folder to match your display driver (ST7735) and pin mappings provided above.
+* **Drivers:** Ensure you have the CP210x or CH340 driver installed for your ESP32 board to be recognized by your computer.
+---
+## Disclaimer
+
+  This tool is designed for research, educational, and authorized testing purposes only. Using this device against networks or devices without explicit, written permission from the owner is illegal. The author assumes no responsibility for any misuse or damage caused by this project.
+
 ---
 
 ## Hardware
@@ -21,17 +38,18 @@
 ## Features
 
 ### WiFi
-- AP scanner (hidden SSIDs included)
-- Deauth — scrollable target picker, broadcast or single AP
-- Beacon spam (rotating SSIDs, all channels)
-- Probe request sniffer (channel-hopping)
-- RSSI mapper — live AP list + channel graph, auto-rescan every 3s
-- FrameConstructionModule — IEEE 802.11 frame builder (beacon, probe, auth, deauth, association)
-- EvilTwinModule — Standalone rogue AP implementation (OPEN_NETWORK, WPA2_MIMIC, CAPTIVE_PORTAL)
+- Scanner: Full AP discovery including hidden SSID detection.
+- Deauthentication: Broadcast or target-specific deauth attacks with a scrollable UI picker.
+- Beacon Spam: Randomized SSID rotation across all channels for network saturation testing.
+- Probe Sniffer: Passive channel-hopping to capture and identify probe requests.
+- RSSI Mapper: Live, auto-refreshing (3s) AP list with real-time channel signal graphing.
+- Frame Builder: Manual IEEE 802.11 frame construction (Beacon, Probe, Auth, Deauth, Association).
+- Evil Twin: Standalone Rogue AP implementation supporting OPEN_NETWORK, WPA2_MIMIC, and CAPTIVE_PORTAL.
 
 ### Bluetooth
-- BLE device scanner
-- BLE advertisement spam — Apple, Samsung (Fast Pair), Windows (Swift Pair)
+- BLE Scanner: Real-time identification of nearby Bluetooth Low Energy devices.
+- BLE Advertising: Automated spamming of popular protocols (Apple, Samsung Fast Pair, Windows Swift Pair).
+- BLE Jammer: Targeted disruption of BLE connections, including passive sniffing and active channel jamming for connection interference.
 
 ### Sub-GHz (CC1101)
 - Signal scanner with RSSI bar graph
@@ -40,14 +58,6 @@
 - Rolling code detector — analyzes captures, tells you if a remote is fixed or rolling code
 - Full config: frequency (300–928 MHz), modulation, bandwidth, TX power, packet length
 - NVS persistence — config survives reboots
-
-### UI
-- Animated Ouroboros splash screen(rotating snake ring)
-- Red on black theme throughout
-- Status bar with active module indicator dot
-- Hint bar on every screen
-- Signal bar icons (5-bar WiFi style) for RSSI
-- Ouroboros spinner on waiting screens (capture, probe sniff)
 
 ---
 
@@ -125,7 +135,8 @@ ouroboros/
 │   │   ├── DeauthPicker.h/cpp    # AP target selector
 │   │   ├── EvilTwinModule.h/cpp  # OPEN_NETWORK, WPA2_MIMIC, CAPTIVE_PORTAL
 │   │   ├── FrameConstructionModule.h/cpp # Non-blocking state machine + GATT characteristic integration
-│   │   └── NVSConfig.h/cpp       # Persistent config via ESP32 NVS
+│   │   ├── NVSConfig.h/cpp       # Persistent config via ESP32 NVS
+│   │   └── BLESnifferJammer.h/cpp # BLE Jammer
 │   └── utils/
 │       └── Buttons.h/cpp         # OneButton — click / long / double
 ├── include/
@@ -133,26 +144,6 @@ ouroboros/
 ├── platformio.ini
 └── README.md
 ```
-
----
-
-## Architecture
-
-```
-[ Buttons ] → [ Menu State Machine ] → [ Feature Modules ] → [ Display ]
-                      ↕                        ↕
-              [ ConfigScreen ]           [ Ouroboros ]
-              [ DeauthPicker ]           (spinner overlay)
-              [ RollingCodeDetector ]
-              [ WiFiMapper ]
-```
-
-- Every screen is a state — adding a feature = new enum value + module file
-- `SELECT_LONG` universally starts/stops the active module
-- `BACK_LONG` universally goes home
-- All modules log to Serial at 115200 for easy debugging
-- Sub-GHz config auto-saves to NVS on exit
-
 ---
 
 ## Dependencies
@@ -176,10 +167,5 @@ pio device monitor --baud 115200
 ```
 
 ---
-
-## Legal
-
-For **authorized security testing and educational use only**.
-Always test on networks and devices you own or have written authorization to test.
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
