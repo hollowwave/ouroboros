@@ -22,6 +22,8 @@
 
   This tool is designed for research, educational, and authorized testing purposes only. Using this device against networks or devices without explicit, written permission from the owner is illegal. The author assumes no responsibility for any misuse or damage caused by this project.
 
+  See the full [disclaimer](DISCLAIMER.md)
+
 ---
 
 ## Hardware
