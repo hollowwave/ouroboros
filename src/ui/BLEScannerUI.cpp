@@ -284,11 +284,11 @@ void BLEStatsScreen::tick() {
 
     BtnEvent e = _buttons.consume();
 
-    if (e == BtnEvent::RIGHT || e == BtnEvent::DOWN) {
+    if (e == BtnEvent::DOWN || e == BtnEvent::DOWN_DBL) {
         _stat_page = (_stat_page + 1) % 3;
     }
 
-    if (e == BtnEvent::LEFT || e == BtnEvent::UP) {
+    if (e == BtnEvent::UP || e == BtnEvent::UP_DBL) {
         _stat_page = (_stat_page == 0) ? 2 : _stat_page - 1;
     }
 

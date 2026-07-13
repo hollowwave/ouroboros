@@ -207,18 +207,7 @@ void ConfigScreen::_drawField(uint8_t idx, bool selected, bool editing) {
                  f.decimals, f.value, f.unit);
     } else if (idx == 1) {
         snprintf(valStr, sizeof(valStr), "%s", _modName((int)f.value));
-    } else if (idx == 2) {* barW);
-    _display.fillRect(3,        y, barW, 2, CLR_SUBTLE);
-    _display.fillRect(3,        y, fill, 2, CLR_ACCENT);
-}
-
-void ConfigScreen::_drawHints() {
-    if (!_editing) {
-        _display.drawHintGlyphs(Glyph::DOT, "edit", Glyph::CHEVRON_LEFT, "save");
-    } else {
-        _display.drawHintGlyphs(Glyph::ARROW_UP, "value", Glyph::DOT, "ok");
-    }
-}
+    } else if (idx == 2) {
         snprintf(valStr, sizeof(valStr), "%s", _bwName((int)f.value));
     } else if (idx == 3) {
         snprintf(valStr, sizeof(valStr), "%s", _txPowerName((int)f.value));
@@ -242,4 +231,15 @@ void ConfigScreen::_drawHints() {
 
 void ConfigScreen::_drawValueBar(float val, float minV, float maxV, int16_t y) {
     int16_t barW = SCREEN_W - 6;
-    int16_t fill = (int16_t)((val - minV) / (maxV - minV) 
+    int16_t fill = (int16_t)((val - minV) / (maxV - minV) * barW);
+    _display.fillRect(3,        y, barW, 2, CLR_SUBTLE);
+    _display.fillRect(3,        y, fill, 2, CLR_ACCENT);
+}
+
+void ConfigScreen::_drawHints() {
+    if (!_editing) {
+        _display.drawHintGlyphs(Glyph::DOT, "edit", Glyph::CHEVRON_LEFT, "save");
+    } else {
+        _display.drawHintGlyphs(Glyph::ARROW_UP, "value", Glyph::DOT, "ok");
+    }
+}

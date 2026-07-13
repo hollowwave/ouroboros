@@ -1,4 +1,5 @@
 #include "FrameConstructionModule.h"
+#include <WiFi.h>
 #include <stdio.h>
 
 // ─────────────────────────────────────────
@@ -176,7 +177,6 @@ size_t FrameConstructionModule::_addInformationElements(
 
 bool FrameConstructionModule::_validateFrameLength(size_t length) const {
     if (length > FrameBuffer::MAX_SIZE) {
-        _error_count++;
         return false;
     }
     return true;

@@ -4,7 +4,10 @@ static const MenuItem MAIN_ITEMS[] = {
     { "WiFi",    Screen::WIFI_MENU,   CLR_TEXT, Glyph::WIFI   },
     { "BLE",     Screen::BLE_MENU,    CLR_TEXT, Glyph::BLE    },
     { "Sub-GHz", Screen::SUBGHZ_MENU, CLR_TEXT, Glyph::SUBGHZ },
+    { "Frame",   Screen::FRAME_ANALYSIS, CLR_TEXT, Glyph::CONFIG },
+    { "Evil Twin", Screen::EVIL_TWIN_MENU, CLR_TEXT, Glyph::ATTACK },
 };
+
 static const MenuItem WIFI_ITEMS[] = {
     { "Scan",        Screen::WIFI_SCAN,          CLR_TEXT,   Glyph::SCAN   },
     { "Deauth",      Screen::WIFI_DEAUTH_PICKER, CLR_ACCENT, Glyph::ATTACK },
@@ -12,16 +15,32 @@ static const MenuItem WIFI_ITEMS[] = {
     { "Probe Sniff", Screen::WIFI_PROBE_SNIFF,   CLR_TEXT,   Glyph::SCAN   },
     { "RSSI Mapper", Screen::WIFI_MAPPER,        CLR_TEXT,   Glyph::MAPPER },
 };
+
 static const MenuItem BLE_ITEMS[] = {
-    { "Scan",  Screen::BLE_SCAN,  CLR_TEXT,   Glyph::SCAN   },
-    { "Spam",  Screen::BLE_SPAM,  CLR_ACCENT, Glyph::ATTACK },
+    { "Scan",    Screen::BLE_SNIFFER_SCAN, CLR_TEXT,   Glyph::SCAN   },
+    { "Jam",     Screen::BLE_JAMMER_CONTROL, CLR_ACCENT, Glyph::ATTACK },
+    { "Stats",   Screen::BLE_STATS,        CLR_TEXT,   Glyph::CONFIG },
 };
+
 static const MenuItem SUBGHZ_ITEMS[] = {
     { "Scan",        Screen::SUBGHZ_SCAN,    CLR_TEXT, Glyph::SCAN   },
     { "Capture",     Screen::SUBGHZ_CAPTURE, CLR_TEXT, Glyph::SCAN   },
     { "Replay",      Screen::SUBGHZ_REPLAY,  CLR_TEXT, Glyph::ATTACK },
-    { "Code Detect", Screen::SUBGHZ_ROLLING, CLR_TEXT, Glyph::CONFIG },
+    { "Rolling Code", Screen::SUBGHZ_ROLLING, CLR_TEXT, Glyph::CONFIG },
     { "Config",      Screen::SUBGHZ_CONFIG,  CLR_DIM,  Glyph::CONFIG },
+};
+
+static const MenuItem FRAME_ITEMS[] = {
+    { "Beacon",   Screen::FRAME_ANALYSIS_BEACON, CLR_TEXT, Glyph::SCAN },
+    { "Auth Seq", Screen::FRAME_ANALYSIS_AUTH,   CLR_TEXT, Glyph::CONFIG },
+    { "Deauth",   Screen::FRAME_ANALYSIS_DEAUTH, CLR_ACCENT, Glyph::ATTACK },
+    { "Probe",    Screen::FRAME_ANALYSIS_PROBE,  CLR_TEXT, Glyph::SCAN },
+    { "GATT",     Screen::FRAME_ANALYSIS_GATT,   CLR_TEXT, Glyph::CONFIG },
+};
+
+static const MenuItem EVIL_TWIN_ITEMS[] = {
+    { "Scan",  Screen::EVIL_TWIN_SCAN,        CLR_TEXT, Glyph::SCAN },
+    { "Creds", Screen::EVIL_TWIN_CREDENTIALS, CLR_ACCENT, Glyph::CONFIG },
 };
 
 static uint32_t bootStartTime = 0;
@@ -55,10 +74,12 @@ void Menu::tick() {
 
     int16_t count = 0;
     switch (_screen) {
-        case Screen::MAIN_MENU:   count = 3; break;
+        case Screen::MAIN_MENU:   count = 5; break;
         case Screen::WIFI_MENU:   count = 5; break;
-        case Screen::BLE_MENU:    count = 2; break;
+        case Screen::BLE_MENU:    count = 3; break;
         case Screen::SUBGHZ_MENU: count = 5; break;
+        case Screen::FRAME_ANALYSIS: count = 5; break;
+        case Screen::EVIL_TWIN_MENU: count = 2; break;
         default: count = 0; break;
     }
 
@@ -86,6 +107,8 @@ void Menu::_back() {
         case Screen::WIFI_MENU:
         case Screen::BLE_MENU:
         case Screen::SUBGHZ_MENU:
+        case Screen::FRAME_ANALYSIS:
+        case Screen::EVIL_TWIN_MENU:
             _navigate(Screen::MAIN_MENU); break;
         case Screen::WIFI_SCAN:
         case Screen::WIFI_DEAUTH:
@@ -96,6 +119,9 @@ void Menu::_back() {
             _navigate(Screen::WIFI_MENU); break;
         case Screen::BLE_SCAN:
         case Screen::BLE_SPAM:
+        case Screen::BLE_SNIFFER_SCAN:
+        case Screen::BLE_JAMMER_CONTROL:
+        case Screen::BLE_STATS:
             _navigate(Screen::BLE_MENU); break;
         case Screen::SUBGHZ_SCAN:
         case Screen::SUBGHZ_CAPTURE:
@@ -103,6 +129,16 @@ void Menu::_back() {
         case Screen::SUBGHZ_ROLLING:
         case Screen::SUBGHZ_CONFIG:
             _navigate(Screen::SUBGHZ_MENU); break;
+        case Screen::FRAME_ANALYSIS_BEACON:
+        case Screen::FRAME_ANALYSIS_AUTH:
+        case Screen::FRAME_ANALYSIS_DEAUTH:
+        case Screen::FRAME_ANALYSIS_PROBE:
+        case Screen::FRAME_ANALYSIS_GATT:
+            _navigate(Screen::FRAME_ANALYSIS); break;
+        case Screen::EVIL_TWIN_SCAN:
+        case Screen::EVIL_TWIN_RUNNING:
+        case Screen::EVIL_TWIN_CREDENTIALS:
+            _navigate(Screen::EVIL_TWIN_MENU); break;
         default:
             _navigate(Screen::MAIN_MENU); break;
     }
@@ -125,6 +161,8 @@ void Menu::_select(int16_t count) {
         case Screen::WIFI_MENU:   _navigate(WIFI_ITEMS[_cursor].target);   break;
         case Screen::BLE_MENU:    _navigate(BLE_ITEMS[_cursor].target);    break;
         case Screen::SUBGHZ_MENU: _navigate(SUBGHZ_ITEMS[_cursor].target); break;
+        case Screen::FRAME_ANALYSIS: _navigate(FRAME_ITEMS[_cursor].target); break;
+        case Screen::EVIL_TWIN_MENU: _navigate(EVIL_TWIN_ITEMS[_cursor].target); break;
         default: break;
     }
 }
@@ -136,6 +174,8 @@ void Menu::_redraw() {
         case Screen::WIFI_MENU:   _renderWifiMenu();   break;
         case Screen::BLE_MENU:    _renderBleMenu();    break;
         case Screen::SUBGHZ_MENU: _renderSubGhzMenu(); break;
+        case Screen::FRAME_ANALYSIS: _renderFrameAnalysisMenu(); break;
+        case Screen::EVIL_TWIN_MENU: _renderEvilTwinMenu(); break;
 
         case Screen::WIFI_SCAN:
             _renderRunningScreen("WIFI", Glyph::WIFI, "Scan",
@@ -155,6 +195,12 @@ void Menu::_redraw() {
         case Screen::BLE_SPAM:
             _renderRunningScreen("BLE", Glyph::BLE, "Spam",
                 Glyph::DOT, "toggle", Glyph::CHEVRON_LEFT, "stop");        break;
+        case Screen::BLE_SNIFFER_SCAN:
+            _renderRunningScreen("BLE", Glyph::BLE, "Sniffer",
+                Glyph::DOT, "scan", Glyph::CHEVRON_LEFT, "back");          break;
+        case Screen::BLE_JAMMER_CONTROL:
+            _renderRunningScreen("BLE", Glyph::BLE, "Jammer",
+                Glyph::NONE, nullptr, Glyph::CHEVRON_LEFT, "stop");        break;
         case Screen::SUBGHZ_SCAN:
             _renderRunningScreen("SUB-GHZ", Glyph::SUBGHZ, "Scan",
                 Glyph::NONE, nullptr, Glyph::CHEVRON_LEFT, "stop");        break;
@@ -232,14 +278,16 @@ void Menu::_renderBoot() {
     _display.raw().setCursor((SCREEN_W - titleW) / 2, 50);
     _display.raw().print("OUROBOROS");
 
-    _display.raw().drawFastHLine(20, 62, SCREEN_W - 40, CLR_ACCENT_DIM);
+    _display.raw().drawFastHLine(20, 62, SCREEN_W - 40, CLR_ACCENT);
 
     _display.drawCenteredText("by hollowwave", 72, CLR_ACCENT_DIM);
 
     _display.drawCenteredText("initializing...", 100, CLR_SUBTLE);
 }
 
-void Menu::_renderMainMenu()   { _renderSelector(MAIN_ITEMS,   3, "OUROBOROS", Glyph::NONE); }
+void Menu::_renderMainMenu()   { _renderSelector(MAIN_ITEMS,   5, "OUROBOROS", Glyph::NONE); }
 void Menu::_renderWifiMenu()   { _renderSelector(WIFI_ITEMS,   5, "WIFI",      Glyph::WIFI); }
-void Menu::_renderBleMenu()    { _renderSelector(BLE_ITEMS,    2, "BLUETOOTH", Glyph::BLE); }
+void Menu::_renderBleMenu()    { _renderSelector(BLE_ITEMS,    3, "BLUETOOTH", Glyph::BLE); }
 void Menu::_renderSubGhzMenu() { _renderSelector(SUBGHZ_ITEMS, 5, "SUB-GHZ",   Glyph::SUBGHZ); }
+void Menu::_renderFrameAnalysisMenu() { _renderSelector(FRAME_ITEMS, 5, "FRAME ANALYSIS", Glyph::CONFIG); }
+void Menu::_renderEvilTwinMenu() { _renderSelector(EVIL_TWIN_ITEMS, 2, "EVIL TWIN", Glyph::ATTACK); }

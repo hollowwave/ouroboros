@@ -51,7 +51,7 @@ struct MenuItem {
     const char* label;
     Screen      target;
     uint16_t    labelColor;
-    Glyph       icon = Glyph::NONE;
+    Glyph       icon;
 };
 
 class Menu {

@@ -342,7 +342,7 @@ void EvilTwinModule::_handleClientConnection(const uint8_t* client_mac) {
 //  Packet Capture & Credential Sniffing
 // ─────────────────────────────────────────
 void EvilTwinModule::_capturePacket(const uint8_t* payload, size_t length) {
-    if (_captured_creds_count >= EVIL_TWIN_CREDENTIALS) {
+    if (_captured_creds_count >= EVIL_TWIN_MAX_CREDENTIALS) {
         return;
     }
 
@@ -458,7 +458,7 @@ void EvilTwinModule::loadCredentials() {
 
     int32_t count = 0;
     nvs_get_i32(handle, "cred_count", &count);
-    _captured_creds_count = (count > EVIL_TWIN_CREDENTIALS) ? EVIL_TWIN_CREDENTIALS : count;
+    _captured_creds_count = (count > EVIL_TWIN_MAX_CREDENTIALS) ? EVIL_TWIN_MAX_CREDENTIALS : count;
 
     for (int i = 0; i < _captured_creds_count; i++) {
         char key_ssid[32], key_mac[32], key_user[32], key_pass[32];

@@ -13,11 +13,11 @@ struct ConfigField {
     float       value;
     float       minVal;
     float       maxVal;
-    float       step;       // Normal UP/DOWN increment
-    float       stepFast;   // Long-press UP/DOWN increment
-    uint8_t     decimals;   // Display precision
-    const char* unit;       // e.g. "MHz", "dBm"
-    Glyph       icon = Glyph::CONFIG;
+    float       step;
+    float       stepFast;
+    uint8_t     decimals;
+    const char* unit;
+    Glyph       icon;  // <-- moved to end, removed default
 };
 
 // ─────────────────────────────────────────
@@ -49,11 +49,11 @@ private:
     // ── Fields ───────────────────────────────────
     static const uint8_t FIELD_COUNT = 5;
     ConfigField _fields[FIELD_COUNT] = {
-        { "Frequency", 433.92f, 300.0f, 928.0f, 0.01f, 1.0f,  2, "MHz", Glyph::SUBGHZ },
-        { "Modulation",  2.0f,   0.0f,   4.0f,  1.0f,  1.0f,  0, "",    Glyph::CONFIG },
-        { "Bandwidth",   0.0f,   0.0f,   3.0f,  1.0f,  1.0f,  0, "",    Glyph::CONFIG },
-        { "TX Power",    0.0f,   0.0f,   7.0f,  1.0f,  1.0f,  0, "",    Glyph::CONFIG },
-        { "Pkt Length", 61.0f,   1.0f,  64.0f,  1.0f,  4.0f,  0, "B",   Glyph::CONFIG },
+    	{ "Frequency", 433.92f, 300.0f, 928.0f, 0.01f, 1.0f,  2, "MHz", Glyph::SUBGHZ },
+    	{ "Modulation",  2.0f,   0.0f,   4.0f,  1.0f,  1.0f,  0, "",    Glyph::CONFIG },
+    	{ "Bandwidth",   0.0f,   0.0f,   3.0f,  1.0f,  1.0f,  0, "",    Glyph::CONFIG },
+    	{ "TX Power",    0.0f,   0.0f,   7.0f,  1.0f,  1.0f,  0, "",    Glyph::CONFIG },
+    	{ "Pkt Length", 61.0f,   1.0f,  64.0f,  1.0f,  4.0f,  0, "B",   Glyph::CONFIG },
     };
 
     // ── Label lookups for enum fields ────────────
