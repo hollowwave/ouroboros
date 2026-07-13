@@ -16,10 +16,12 @@ The following features interact with wireless communications and may be regulate
 
 | Feature | Notes |
 |---|---|
-| Deauthentication attack | Illegal to use on networks you don't own |
-| Beacon spam | May interfere with legitimate networks |
-| BLE advertisement spam | May disrupt nearby devices |
-| Sub-GHz capture/replay | May be restricted depending on frequency and region |
+| Deauthentication attack | Unauthorized disruption of network services is strictly prohibited. |
+| Beacon spam | Unauthorized disruption of network services is strictly prohibited. |
+| BLE advertisement spam | May interfere with proximity-based services and device pairing. |
+| Sub-GHz capture/replay | Potential violation of radio communication laws; use only on your own hardware. |
+| Evil Twin attacks | May lead to unauthorized data interception; strictly for controlled lab environments. |
+| BLE Jammer | Active signal interference; highly regulated and potentially illegal to operate in public spaces. |
 
 Always check your **local laws and regulations** before use. In the Philippines, wireless interference is regulated by the **National Telecommunications Commission (NTC)**.
 
