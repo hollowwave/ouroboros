@@ -1,9 +1,0 @@
-{
-    "files.exclude": {
-        "**/*.rpyc": true,
-        "**/*.rpa": true,
-        "**/*.rpymc": true,
-        "**/cache/": true
-    },
-    "idf.currentSetup": "C:\\Users\\ianca\\esp\\v5.4.1\\esp-idf"
-}
